@@ -477,6 +477,44 @@ while running:
 
         # 3. Dessiner la barre d'outils
         draw_toolbar(screen_width, grid_bottom_y)
+        draw_minimap(screen_width, grid_bottom_y)
+
+
+    def draw_minimap(screen_width, grid_bottom_y):
+        # Taille de la minimap
+        MAP_W = 200
+        MAP_H = 160
+        SCALE_X = MAP_W / GRID_WIDTH
+        SCALE_Y = MAP_H / GRID_HEIGHT
+
+        # Position (en bas à droite, au-dessus de la toolbar)
+        minimap_x = screen_width - MAP_W - 10
+        minimap_y = grid_bottom_y - MAP_H - 10
+
+        # Fond de la minimap
+        pygame.draw.rect(screen, (30, 30, 30), (minimap_x - 2, minimap_y - 2, MAP_W + 4, MAP_H + 4), border_radius=4)
+        pygame.draw.rect(screen, (0, 0, 0), (minimap_x, minimap_y, MAP_W, MAP_H))
+
+        # Pixels représentant chaque tuile
+        for r in range(GRID_HEIGHT):
+            for c in range(GRID_WIDTH):
+                terrain_type = world_grid[r][c]
+                color = COLORS.get(terrain_type, (255, 0, 255))  # magenta si inconnu
+
+                px = int(minimap_x + c * SCALE_X)
+                py = int(minimap_y + r * SCALE_Y)
+
+                # dessiner un petit pixel
+                screen.fill(color, (px, py, max(1, int(SCALE_X)), max(1, int(SCALE_Y))))
+
+        # Rectangle de la zone visible
+        view_w = (screen_width / TILE_SIZE) * SCALE_X
+        view_h = (grid_bottom_y / TILE_SIZE) * SCALE_Y
+        view_x = minimap_x + (camera_x / TILE_SIZE) * SCALE_X
+        view_y = minimap_y + (camera_y / TILE_SIZE) * SCALE_Y
+
+        pygame.draw.rect(screen, (255, 0, 0), (view_x, view_y, view_w, view_h), width=2)
+
 
     pygame.display.flip()
     clock.tick(60)
