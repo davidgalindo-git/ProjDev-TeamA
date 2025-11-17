@@ -285,6 +285,96 @@ def draw_toolbar(screen_width, grid_bottom_y):
     # Retirer la zone de clipping
     screen.set_clip(None)
 
+# --- MINIMAP (définir avant la boucle principale) ---
+def draw_minimap(screen_width, grid_bottom_y):
+    """Dessine la minimap en haut à droite et le rectangle de la vue."""
+    MAP_W = 200
+    MAP_H = 160
+    MARGIN = 10
+
+    # Position en haut à droite
+    minimap_x = screen_width - MAP_W - MARGIN
+    minimap_y = MARGIN
+
+    # fond + bord
+    pygame.draw.rect(screen, (30, 30, 30), (minimap_x - 2, minimap_y - 2, MAP_W + 4, MAP_H + 4), border_radius=4)
+    pygame.draw.rect(screen, (0, 0, 0), (minimap_x, minimap_y, MAP_W, MAP_H))
+
+    cell_w = MAP_W / GRID_WIDTH
+    cell_h = MAP_H / GRID_HEIGHT
+
+    # dessiner la grille réduite
+    for r in range(GRID_HEIGHT):
+        for c in range(GRID_WIDTH):
+            terrain_type = world_grid[r][c]
+            color = COLORS.get(terrain_type, (255, 0, 255))
+            px = int(minimap_x + c * cell_w)
+            py = int(minimap_y + r * cell_h)
+            # dessine un petit rectangle (au moins 1px)
+            screen.fill(color, (px, py, max(1, int(math.ceil(cell_w))), max(1, int(math.ceil(cell_h)))))
+
+    # rectangle de la zone visible (en tuiles)
+    # largeur de la vue en tuiles = screen_width / TILE_SIZE
+    view_cols = screen_width / TILE_SIZE
+    view_rows = (grid_bottom_y) / TILE_SIZE
+
+    view_w = view_cols * cell_w
+    view_h = view_rows * cell_h
+    view_x = minimap_x + (camera_x / TILE_SIZE) * cell_w
+    view_y = minimap_y + (camera_y / TILE_SIZE) * cell_h
+
+    # tracer le rectangle (avec clamp pour garder l'affichage propre)
+    pygame.draw.rect(screen, (255, 0, 0), (view_x, view_y, view_w, view_h), width=2)
+
+
+def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
+    """Si clic dans la minimap, centre la caméra sur la tuile cliquée. Retourne True si consommé."""
+    MAP_W = 200
+    MAP_H = 160
+    MARGIN = 10
+
+    mini_x = screen_width - MAP_W - MARGIN
+    mini_y = MARGIN
+
+    mx, my = mouse_pos
+
+    # si pas dans la minimap, on ne fait rien
+    if not (mini_x <= mx <= mini_x + MAP_W and mini_y <= my <= mini_y + MAP_H):
+        return False
+
+    # position relative dans la minimap (0..1)
+    rel_x = (mx - mini_x) / MAP_W
+    rel_y = (my - mini_y) / MAP_H
+
+    # convertir en colonne/ligne de la grille (0..GRID_WIDTH-1 / 0..GRID_HEIGHT-1)
+    target_col = int(rel_x * GRID_WIDTH)
+    target_row = int(rel_y * GRID_HEIGHT)
+
+    # centrer la caméra sur la tuile (en pixels)
+    target_world_x = (target_col + 0.5) * TILE_SIZE
+    target_world_y = (target_row + 0.5) * TILE_SIZE
+
+    # Calcul des limites de la caméra
+    scr_w, scr_h = screen.get_size()
+    grid_bottom = scr_h - TOOLBAR_HEIGHT
+
+    max_camera_x = max(0.0, GRID_WIDTH * TILE_SIZE - scr_w)
+    max_camera_y = max(0.0, GRID_HEIGHT * TILE_SIZE - grid_bottom)
+
+    # Centrer la caméra (et clamping)
+    new_cam_x = target_world_x - (scr_w / 2.0)
+    new_cam_y = target_world_y - (grid_bottom / 2.0)
+
+    # clamp
+    new_cam_x = max(0.0, min(new_cam_x, max_camera_x))
+    new_cam_y = max(0.0, min(new_cam_y, max_camera_y))
+
+    global camera_x, camera_y
+    camera_x = new_cam_x
+    camera_y = new_cam_y
+
+    return True
+
 
 # --- Fonction de mise à jour des images redimensionnées (INCHANGÉE) ---
 def update_terrain_images():
@@ -483,73 +573,9 @@ while running:
                 if 0 <= grid_col < GRID_WIDTH and 0 <= grid_row < GRID_HEIGHT:
                     world_grid[int(grid_row)][int(grid_col)] = CURRENT_TERRAIN
 
-        # 3. Dessiner la barre d'outils
+        # 3. Dessiner l'UI
         draw_toolbar(screen_width, grid_bottom_y)
         draw_minimap(screen_width, grid_bottom_y)
-
-
-    def draw_minimap(screen_width, grid_bottom_y):
-        # Taille de la minimap
-        MAP_W = 200
-        MAP_H = 160
-        SCALE_X = MAP_W / GRID_WIDTH
-        SCALE_Y = MAP_H / GRID_HEIGHT
-
-        # Position (en bas à droite, au-dessus de la toolbar)
-        minimap_x = screen_width - MAP_W - 10
-        minimap_y = 10
-
-        # Fond de la minimap
-        pygame.draw.rect(screen, (30, 30, 30), (minimap_x - 2, minimap_y - 2, MAP_W + 4, MAP_H + 4), border_radius=4)
-        pygame.draw.rect(screen, (0, 0, 0), (minimap_x, minimap_y, MAP_W, MAP_H))
-
-        # Pixels représentant chaque tuile
-        for r in range(GRID_HEIGHT):
-            for c in range(GRID_WIDTH):
-                terrain_type = world_grid[r][c]
-                color = COLORS.get(terrain_type, (255, 0, 255))  # magenta si inconnu
-
-                px = int(minimap_x + c * SCALE_X)
-                py = int(minimap_y + r * SCALE_Y)
-
-                # dessiner un petit pixel
-                screen.fill(color, (px, py, max(1, int(SCALE_X)), max(1, int(SCALE_Y))))
-
-        # Rectangle de la zone visible
-        view_w = (screen_width / TILE_SIZE) * SCALE_X
-        view_h = (grid_bottom_y / TILE_SIZE) * SCALE_Y
-        view_x = minimap_x + (camera_x / TILE_SIZE) * SCALE_X
-        view_y = minimap_y + (camera_y / TILE_SIZE) * SCALE_Y
-
-        pygame.draw.rect(screen, (255, 0, 0), (view_x, view_y, view_w, view_h), width=2)
-
-
-    def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
-        """Déplace la caméra vers la zone cliquée sur la minimap."""
-        mini_size = 200
-        mini_margin = 10
-        mini_x = screen_width - mini_size - mini_margin
-        mini_y = mini_margin
-
-        # Vérifier si le clic est dans la minimap
-        if not (mini_x <= mouse_pos[0] <= mini_x + mini_size and
-                mini_y <= mouse_pos[1] <= mini_y + mini_size):
-            return False  # le clic ne concerne pas la minimap
-
-        # Calcul du pourcentage de clic sur la minimap
-        rel_x = (mouse_pos[0] - mini_x) / mini_size
-        rel_y = (mouse_pos[1] - mini_y) / mini_size
-
-        # Convertir en coordonnées monde
-        world_x = rel_x * GRID_WIDTH * TILE_SIZE
-        world_y = rel_y * GRID_HEIGHT * TILE_SIZE
-
-        # Centrer la caméra autour de ce point
-        global camera_x, camera_y
-        camera_x = world_x - (screen_width / 2)
-        camera_y = world_y - (grid_bottom_y / 2)
-
-        return True
 
     pygame.display.flip()
     clock.tick(60)
