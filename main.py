@@ -83,6 +83,8 @@ camera_x = 0.0
 camera_y = 0.0
 is_panning = False
 last_mouse_pos = (0, 0)
+minimap_dragging = False
+minimap_drag_offset = (0, 0)
 
 # Variables de défilement de l'UI
 scroll_offset = 0
@@ -93,9 +95,11 @@ BUTTON_HEIGHT = TOOLBAR_HEIGHT - BUTTON_GAP
 # Créer la grille (carte)
 world_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
 
-# Font plus grande pour le chiffre
+# Fonts
 font = pygame.font.Font(None, 32)
 title_font = pygame.font.Font(None, 48)
+label_font = pygame.font.SysFont("comicsans", 15)
+
 clock = pygame.time.Clock()
 
 
@@ -277,7 +281,6 @@ def draw_toolbar(screen_width, grid_bottom_y):
 
         # Affichage du type de terrain
         text_label = str(btn["label"])
-        label_font = pygame.font.SysFont("comicsans", 15)
         text_surface = label_font.render(text_label, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=btn_rect.center)
         screen.blit(text_surface, text_rect)
@@ -328,7 +331,8 @@ def draw_minimap(screen_width, grid_bottom_y):
 
 
 def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
-    """Si clic dans la minimap, centre la caméra sur la tuile cliquée. Retourne True si consommé."""
+    global camera_x, camera_y, minimap_dragging, minimap_drag_offset
+
     MAP_W = 200
     MAP_H = 160
     MARGIN = 10
@@ -338,43 +342,82 @@ def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
 
     mx, my = mouse_pos
 
-    # si pas dans la minimap, on ne fait rien
     if not (mini_x <= mx <= mini_x + MAP_W and mini_y <= my <= mini_y + MAP_H):
         return False
 
-    # position relative dans la minimap (0..1)
+    # coordonnées relatives
     rel_x = (mx - mini_x) / MAP_W
     rel_y = (my - mini_y) / MAP_H
 
-    # convertir en colonne/ligne de la grille (0..GRID_WIDTH-1 / 0..GRID_HEIGHT-1)
+    # calcul du rectangle de vue pour déterminer si on clique dedans (début drag)
+    view_cols = screen_width / TILE_SIZE
+    view_rows = grid_bottom_y / TILE_SIZE
+    cell_w = MAP_W / GRID_WIDTH
+    cell_h = MAP_H / GRID_HEIGHT
+
+    view_w = view_cols * cell_w
+    view_h = view_rows * cell_h
+    view_x = mini_x + (camera_x / TILE_SIZE) * cell_w
+    view_y = mini_y + (camera_y / TILE_SIZE) * cell_h
+
+    # si clic dans le rectangle rouge → start drag
+    if view_x <= mx <= view_x + view_w and view_y <= my <= view_y + view_h:
+        minimap_dragging = True
+        minimap_drag_offset = (mx - view_x, my - view_y)
+        return True
+
+    # sinon → clic normal (téléportation instantanée)
     target_col = int(rel_x * GRID_WIDTH)
     target_row = int(rel_y * GRID_HEIGHT)
 
-    # centrer la caméra sur la tuile (en pixels)
-    target_world_x = (target_col + 0.5) * TILE_SIZE
-    target_world_y = (target_row + 0.5) * TILE_SIZE
-
-    # Calcul des limites de la caméra
     scr_w, scr_h = screen.get_size()
-    grid_bottom = scr_h - TOOLBAR_HEIGHT
+    new_cam_x = (target_col + 0.5) * TILE_SIZE - scr_w / 2
+    new_cam_y = (target_row + 0.5) * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT) / 2
 
-    max_camera_x = max(0.0, GRID_WIDTH * TILE_SIZE - scr_w)
-    max_camera_y = max(0.0, GRID_HEIGHT * TILE_SIZE - grid_bottom)
+    max_camera_x = max(0, GRID_WIDTH * TILE_SIZE - scr_w)
+    max_camera_y = max(0, GRID_HEIGHT * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT))
 
-    # Centrer la caméra (et clamping)
-    new_cam_x = target_world_x - (scr_w / 2.0)
-    new_cam_y = target_world_y - (grid_bottom / 2.0)
-
-    # clamp
-    new_cam_x = max(0.0, min(new_cam_x, max_camera_x))
-    new_cam_y = max(0.0, min(new_cam_y, max_camera_y))
-
-    global camera_x, camera_y
-    camera_x = new_cam_x
-    camera_y = new_cam_y
+    camera_x = max(0, min(new_cam_x, max_camera_x))
+    camera_y = max(0, min(new_cam_y, max_camera_y))
 
     return True
 
+def handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y):
+    global camera_x, camera_y, minimap_dragging
+
+    if not minimap_dragging:
+        return
+
+    MAP_W = 200
+    MAP_H = 160
+    MARGIN = 10
+
+    mini_x = screen_width - MAP_W - MARGIN
+    mini_y = MARGIN
+
+    mx, my = mouse_pos
+
+    cell_w = MAP_W / GRID_WIDTH
+    cell_h = MAP_H / GRID_HEIGHT
+
+    # position de la nouvelle tuile ciblée
+    view_x = mx - minimap_drag_offset[0]
+    view_y = my - minimap_drag_offset[1]
+
+    # conversion en tuiles
+    tile_col = (view_x - mini_x) / cell_w
+    tile_row = (view_y - mini_y) / cell_h
+
+    scr_w, scr_h = screen.get_size()
+    new_cam_x = tile_col * TILE_SIZE
+    new_cam_y = tile_row * TILE_SIZE
+
+    # clamp
+    max_camera_x = max(0, GRID_WIDTH * TILE_SIZE - scr_w)
+    max_camera_y = max(0, GRID_HEIGHT * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT))
+
+    camera_x = max(0, min(new_cam_x, max_camera_x))
+    camera_y = max(0, min(new_cam_y, max_camera_y))
 
 # --- Fonction de mise à jour des images redimensionnées (INCHANGÉE) ---
 def update_terrain_images():
@@ -533,6 +576,7 @@ while running:
                     TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
 
         elif event.type == pygame.MOUSEBUTTONUP:
+            minimap_dragging = False
             if event.button == 1:
                 is_drawing = False
             elif event.button == 3:
@@ -541,13 +585,17 @@ while running:
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
 
+            # Priorité : si on est en train de drag la minimap → ignorer le reste
+            if APP_STATE == "GAME_SCREEN" and minimap_dragging:
+                handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
+                continue
+
+            # Panning clic droit
             if APP_STATE == "GAME_SCREEN" and is_panning:
                 dx = mouse_pos[0] - last_mouse_pos[0]
                 dy = mouse_pos[1] - last_mouse_pos[1]
-
                 camera_x -= dx
                 camera_y -= dy
-
                 last_mouse_pos = mouse_pos
 
     # --- LOGIQUE D'AFFICHAGE ---
