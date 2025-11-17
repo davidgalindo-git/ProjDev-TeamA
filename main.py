@@ -69,7 +69,7 @@ TOOLBAR_BUTTONS = [
     {"type": 2, "label": "Dirt"},
     {"type": 3, "label": "Sand"},
     {"type": 0, "label": "Water"},
-    {"type": 4, "label": "stone"},
+    {"type": 4, "label": "Stone"},
 ]
 
 CURRENT_TERRAIN = TOOLBAR_BUTTONS[0]["type"]
@@ -249,22 +249,7 @@ def draw_toolbar(screen_width, grid_bottom_y):
     toolbar_rect = pygame.Rect(0, grid_bottom_y, screen_width, TOOLBAR_HEIGHT)
     pygame.draw.rect(screen, (50, 50, 50), toolbar_rect)
 
-    # --- 1. Dessiner les Flèches de Défilement (INCHANGÉES) ---
-
-    # Flèche Gauche (<<)
-    arrow_left_rect = pygame.Rect(0, grid_bottom_y, SCROLL_BUTTON_WIDTH, TOOLBAR_HEIGHT)
-    pygame.draw.rect(screen, (70, 70, 70), arrow_left_rect)
-    text_left = font.render("<<", True, (255, 255, 255))
-    screen.blit(text_left, text_left.get_rect(center=arrow_left_rect.center))
-
-    # Flèche Droite (>>)
-    arrow_right_rect = pygame.Rect(screen_width - SCROLL_BUTTON_WIDTH, grid_bottom_y, SCROLL_BUTTON_WIDTH,
-                                   TOOLBAR_HEIGHT)
-    pygame.draw.rect(screen, (70, 70, 70), arrow_right_rect)
-    text_right = font.render(">>", True, (255, 255, 255))
-    screen.blit(text_right, text_right.get_rect(center=arrow_right_rect.center))
-
-    # --- 2. Dessiner les Boutons de l'Outil ---
+    # --- Dessiner les Boutons de l'Outil ---
 
     # Définir la zone de clipping pour les boutons
     button_area_rect = pygame.Rect(SCROLL_BUTTON_WIDTH, grid_bottom_y, screen_width - 2 * SCROLL_BUTTON_WIDTH,
@@ -290,9 +275,10 @@ def draw_toolbar(screen_width, grid_bottom_y):
         else:
             pygame.draw.rect(screen, btn_color, btn_rect, border_radius=5)
 
-        # Dessin du Chiffre (Type de terrain)
-        text_label = str(btn["type"])
-        text_surface = font.render(text_label, True, (255, 255, 255))
+        # Affichage du type de terrain
+        text_label = str(btn["label"])
+        label_font = pygame.font.SysFont("comicsans", 15)
+        text_surface = label_font.render(text_label, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=btn_rect.center)
         screen.blit(text_surface, text_rect)
 
