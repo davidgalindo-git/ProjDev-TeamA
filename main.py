@@ -414,6 +414,13 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
+            # --- Priorité : clic sur la minimap ---
+            if APP_STATE == "GAME_SCREEN":
+                if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
+                    # On empêche le reste du code de traiter ce clic
+                    is_drawing = False
+                    is_panning = False
+                    continue
 
             if APP_STATE == "START_SCREEN":
                 handle_start_screen_click(mouse_pos)
@@ -431,6 +438,7 @@ while running:
 
                 elif event.button == 4:  # Molette haut (Zoom in)
                     TILE_SIZE = min(64.0, TILE_SIZE + 2.0)
+
                 elif event.button == 5:  # Molette bas (Zoom out)
                     TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
 
@@ -489,7 +497,7 @@ while running:
 
         # Position (en bas à droite, au-dessus de la toolbar)
         minimap_x = screen_width - MAP_W - 10
-        minimap_y = grid_bottom_y - MAP_H - 10
+        minimap_y = 10
 
         # Fond de la minimap
         pygame.draw.rect(screen, (30, 30, 30), (minimap_x - 2, minimap_y - 2, MAP_W + 4, MAP_H + 4), border_radius=4)
@@ -515,6 +523,33 @@ while running:
 
         pygame.draw.rect(screen, (255, 0, 0), (view_x, view_y, view_w, view_h), width=2)
 
+
+    def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
+        """Déplace la caméra vers la zone cliquée sur la minimap."""
+        mini_size = 200
+        mini_margin = 10
+        mini_x = screen_width - mini_size - mini_margin
+        mini_y = mini_margin
+
+        # Vérifier si le clic est dans la minimap
+        if not (mini_x <= mouse_pos[0] <= mini_x + mini_size and
+                mini_y <= mouse_pos[1] <= mini_y + mini_size):
+            return False  # le clic ne concerne pas la minimap
+
+        # Calcul du pourcentage de clic sur la minimap
+        rel_x = (mouse_pos[0] - mini_x) / mini_size
+        rel_y = (mouse_pos[1] - mini_y) / mini_size
+
+        # Convertir en coordonnées monde
+        world_x = rel_x * GRID_WIDTH * TILE_SIZE
+        world_y = rel_y * GRID_HEIGHT * TILE_SIZE
+
+        # Centrer la caméra autour de ce point
+        global camera_x, camera_y
+        camera_x = world_x - (screen_width / 2)
+        camera_y = world_y - (grid_bottom_y / 2)
+
+        return True
 
     pygame.display.flip()
     clock.tick(60)
