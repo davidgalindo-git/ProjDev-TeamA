@@ -24,7 +24,12 @@ COLORS = {
     1: (0, 150, 0),  # Herbe
     2: (150, 75, 0),  # Montagne
     3: (240, 230, 140),  # Sable
+    4: (120, 120, 120)  # Pierre
 }
+
+# --- Brush Sizes ---
+BRUSH_SIZES = [1, 4, 16, 64]
+CURRENT_BRUSH = 1  # default 1x1
 
 TERRAIN_IMAGES_RAW = {}
 TERRAIN_IMAGES = {}
@@ -65,14 +70,21 @@ except pygame.error as e:
 
 # Définition des boutons dans la barre d'outils
 TOOLBAR_BUTTONS = [
+    {"type": 0, "label": "Water"},
     {"type": 1, "label": "Grass"},
     {"type": 2, "label": "Dirt"},
     {"type": 3, "label": "Sand"},
-    {"type": 0, "label": "Water"},
-    {"type": 4, "label": "stone"},
+    {"type": 4, "label": "Stone"},
+    {"type": "BRUSH_1", "label": "x1", "brush": 1},
+    {"type": "BRUSH_2", "label": "x2", "brush": 2},
+    {"type": "BRUSH_3", "label": "x4", "brush": 4},
+    {"type": "BRUSH_4", "label": "x8", "brush": 8},
+    {"type": "BRUSH_5", "label": "x16", "brush": 16},
+    {"type": "BRUSH_6", "label": "x32", "brush": 32}
 ]
 
 CURRENT_TERRAIN = TOOLBAR_BUTTONS[0]["type"]
+
 
 # --- ÉTATS DE L'APPLICATION ---
 APP_STATE = "START_SCREEN"
@@ -83,6 +95,8 @@ camera_x = 0.0
 camera_y = 0.0
 is_panning = False
 last_mouse_pos = (0, 0)
+minimap_dragging = False
+minimap_drag_offset = (0, 0)
 
 # Variables de défilement de l'UI
 scroll_offset = 0
@@ -93,9 +107,11 @@ BUTTON_HEIGHT = TOOLBAR_HEIGHT - BUTTON_GAP
 # Créer la grille (carte)
 world_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
 
-# Font plus grande pour le chiffre
+# Fonts
 font = pygame.font.Font(None, 32)
 title_font = pygame.font.Font(None, 48)
+label_font = pygame.font.SysFont("comicsans", 15)
+
 clock = pygame.time.Clock()
 
 
@@ -206,8 +222,8 @@ def generate_random_world():
 # --- 4. FONCTIONS UI ET AFFICHAGE ---
 
 def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
-    """Gère le clic sur les boutons de la barre d'outils, y compris le défilement (INCHANGÉ)."""
-    global CURRENT_TERRAIN, scroll_offset
+    """Gère le clic sur les boutons de la barre d'outils."""
+    global CURRENT_TERRAIN, scroll_offset, CURRENT_BRUSH
 
     if mouse_pos[1] > grid_bottom_y:
 
@@ -230,43 +246,31 @@ def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
         # 2. Gérer les boutons d'outils
         button_area_left = SCROLL_BUTTON_WIDTH
         corrected_x = mouse_pos[0] + scroll_offset - button_area_left
-        btn_index = corrected_x // (BUTTON_BASE_WIDTH + BUTTON_GAP)
+        btn_index = int(corrected_x // (BUTTON_BASE_WIDTH + BUTTON_GAP))
 
         if 0 <= btn_index < len(TOOLBAR_BUTTONS):
             btn_x_start_in_corrected_area = btn_index * (BUTTON_BASE_WIDTH + BUTTON_GAP)
             click_x_in_button_space = corrected_x - btn_x_start_in_corrected_area
 
             if click_x_in_button_space < BUTTON_BASE_WIDTH:
-                CURRENT_TERRAIN = TOOLBAR_BUTTONS[btn_index]["type"]
+                btn = TOOLBAR_BUTTONS[btn_index]  # full dict
+
+                # Brush button?
+                if "brush" in btn:
+                    CURRENT_BRUSH = int(btn["brush"])
+                else:
+                    # Standard terrain selection
+                    CURRENT_TERRAIN = btn["type"]
                 return True
 
     return False
 
-
 def draw_toolbar(screen_width, grid_bottom_y):
-    """Dessine la barre d'outils. Utilise maintenant COLORS."""
-
+    """Dessine la barre d'outils et les boutons de brush."""
     toolbar_rect = pygame.Rect(0, grid_bottom_y, screen_width, TOOLBAR_HEIGHT)
     pygame.draw.rect(screen, (50, 50, 50), toolbar_rect)
 
-    # --- 1. Dessiner les Flèches de Défilement (INCHANGÉES) ---
-
-    # Flèche Gauche (<<)
-    arrow_left_rect = pygame.Rect(0, grid_bottom_y, SCROLL_BUTTON_WIDTH, TOOLBAR_HEIGHT)
-    pygame.draw.rect(screen, (70, 70, 70), arrow_left_rect)
-    text_left = font.render("<<", True, (255, 255, 255))
-    screen.blit(text_left, text_left.get_rect(center=arrow_left_rect.center))
-
-    # Flèche Droite (>>)
-    arrow_right_rect = pygame.Rect(screen_width - SCROLL_BUTTON_WIDTH, grid_bottom_y, SCROLL_BUTTON_WIDTH,
-                                   TOOLBAR_HEIGHT)
-    pygame.draw.rect(screen, (70, 70, 70), arrow_right_rect)
-    text_right = font.render(">>", True, (255, 255, 255))
-    screen.blit(text_right, text_right.get_rect(center=arrow_right_rect.center))
-
-    # --- 2. Dessiner les Boutons de l'Outil ---
-
-    # Définir la zone de clipping pour les boutons
+    # --- Dessiner les Boutons de l'Outil ---
     button_area_rect = pygame.Rect(SCROLL_BUTTON_WIDTH, grid_bottom_y, screen_width - 2 * SCROLL_BUTTON_WIDTH,
                                    TOOLBAR_HEIGHT)
     screen.set_clip(button_area_rect)
@@ -275,30 +279,166 @@ def draw_toolbar(screen_width, grid_bottom_y):
 
     for i, btn in enumerate(TOOLBAR_BUTTONS):
         btn_x_absolute = SCROLL_BUTTON_WIDTH + (i * (BUTTON_BASE_WIDTH + BUTTON_GAP)) - scroll_offset
-
         btn_rect = pygame.Rect(btn_x_absolute, button_y, BUTTON_BASE_WIDTH, BUTTON_HEIGHT)
 
-        # UTILISEZ COLORS pour l'UI, car COLORS contient des tuples de couleur, pas des surfaces
-        btn_color = COLORS.get(btn["type"], (50, 50, 50))
+        # choose base color: for terrain use COLORS, for brush use a neutral gray
+        if "brush" in btn:
+            btn_color = (80, 80, 120)
+        else:
+            btn_color = COLORS.get(btn["type"], (50, 50, 50))
 
-        # Dessin du bouton
-        if btn["type"] == CURRENT_TERRAIN:
-            # Highlight pour l'outil sélectionné
+        # Highlight if selected
+        is_selected = False
+        if "brush" in btn and int(btn["brush"]) == int(CURRENT_BRUSH):
+            is_selected = True
+        if not "brush" in btn and btn["type"] == CURRENT_TERRAIN:
+            is_selected = True
+
+        if is_selected:
             pygame.draw.rect(screen, (200, 200, 200), btn_rect, border_radius=5)
             inner_rect = btn_rect.inflate(-4, -4)
             pygame.draw.rect(screen, btn_color, inner_rect, border_radius=3)
         else:
             pygame.draw.rect(screen, btn_color, btn_rect, border_radius=5)
 
-        # Dessin du Chiffre (Type de terrain)
-        text_label = str(btn["type"])
-        text_surface = font.render(text_label, True, (255, 255, 255))
+        # label
+        text_label = str(btn["label"])
+        text_surface = label_font.render(text_label, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=btn_rect.center)
         screen.blit(text_surface, text_rect)
 
-    # Retirer la zone de clipping
     screen.set_clip(None)
 
+# --- MINIMAP (définir avant la boucle principale) ---
+def draw_minimap(screen_width, grid_bottom_y):
+    """Dessine la minimap en haut à droite et le rectangle de la vue."""
+    MAP_W = 200
+    MAP_H = 160
+    MARGIN = 10
+
+    # Position en haut à droite
+    minimap_x = screen_width - MAP_W - MARGIN
+    minimap_y = MARGIN
+
+    # fond + bord
+    pygame.draw.rect(screen, (30, 30, 30), (minimap_x - 2, minimap_y - 2, MAP_W + 4, MAP_H + 4), border_radius=4)
+    pygame.draw.rect(screen, (0, 0, 0), (minimap_x, minimap_y, MAP_W, MAP_H))
+
+    cell_w = MAP_W / GRID_WIDTH
+    cell_h = MAP_H / GRID_HEIGHT
+
+    # dessiner la grille réduite
+    for r in range(GRID_HEIGHT):
+        for c in range(GRID_WIDTH):
+            terrain_type = world_grid[r][c]
+            color = COLORS.get(terrain_type, (255, 0, 255))
+            px = int(minimap_x + c * cell_w)
+            py = int(minimap_y + r * cell_h)
+            # dessine un petit rectangle (au moins 1px)
+            screen.fill(color, (px, py, max(1, int(math.ceil(cell_w))), max(1, int(math.ceil(cell_h)))))
+
+    # rectangle de la zone visible (en tuiles)
+    # largeur de la vue en tuiles = screen_width / TILE_SIZE
+    view_cols = screen_width / TILE_SIZE
+    view_rows = (grid_bottom_y) / TILE_SIZE
+
+    view_w = view_cols * cell_w
+    view_h = view_rows * cell_h
+    view_x = minimap_x + (camera_x / TILE_SIZE) * cell_w
+    view_y = minimap_y + (camera_y / TILE_SIZE) * cell_h
+
+    # tracer le rectangle (avec clamp pour garder l'affichage propre)
+    pygame.draw.rect(screen, (255, 0, 0), (view_x, view_y, view_w, view_h), width=2)
+
+
+def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
+    global camera_x, camera_y, minimap_dragging, minimap_drag_offset
+
+    MAP_W = 200
+    MAP_H = 160
+    MARGIN = 10
+
+    mini_x = screen_width - MAP_W - MARGIN
+    mini_y = MARGIN
+
+    mx, my = mouse_pos
+
+    if not (mini_x <= mx <= mini_x + MAP_W and mini_y <= my <= mini_y + MAP_H):
+        return False
+
+    # coordonnées relatives
+    rel_x = (mx - mini_x) / MAP_W
+    rel_y = (my - mini_y) / MAP_H
+
+    # calcul du rectangle de vue pour déterminer si on clique dedans (début drag)
+    view_cols = screen_width / TILE_SIZE
+    view_rows = grid_bottom_y / TILE_SIZE
+    cell_w = MAP_W / GRID_WIDTH
+    cell_h = MAP_H / GRID_HEIGHT
+
+    view_w = view_cols * cell_w
+    view_h = view_rows * cell_h
+    view_x = mini_x + (camera_x / TILE_SIZE) * cell_w
+    view_y = mini_y + (camera_y / TILE_SIZE) * cell_h
+
+    # si clic dans le rectangle rouge → start drag
+    if view_x <= mx <= view_x + view_w and view_y <= my <= view_y + view_h:
+        minimap_dragging = True
+        minimap_drag_offset = (mx - view_x, my - view_y)
+        return True
+
+    # sinon → clic normal (téléportation instantanée)
+    target_col = int(rel_x * GRID_WIDTH)
+    target_row = int(rel_y * GRID_HEIGHT)
+
+    scr_w, scr_h = screen.get_size()
+    new_cam_x = (target_col + 0.5) * TILE_SIZE - scr_w / 2
+    new_cam_y = (target_row + 0.5) * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT) / 2
+
+    max_camera_x = max(0, GRID_WIDTH * TILE_SIZE - scr_w)
+    max_camera_y = max(0, GRID_HEIGHT * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT))
+
+    camera_x = max(0, min(new_cam_x, max_camera_x))
+    camera_y = max(0, min(new_cam_y, max_camera_y))
+
+    return True
+
+def handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y):
+    global camera_x, camera_y, minimap_dragging
+
+    if not minimap_dragging:
+        return
+
+    MAP_W = 200
+    MAP_H = 160
+    MARGIN = 10
+
+    mini_x = screen_width - MAP_W - MARGIN
+    mini_y = MARGIN
+
+    mx, my = mouse_pos
+
+    cell_w = MAP_W / GRID_WIDTH
+    cell_h = MAP_H / GRID_HEIGHT
+
+    # position de la nouvelle tuile ciblée
+    view_x = mx - minimap_drag_offset[0]
+    view_y = my - minimap_drag_offset[1]
+
+    # conversion en tuiles
+    tile_col = (view_x - mini_x) / cell_w
+    tile_row = (view_y - mini_y) / cell_h
+
+    scr_w, scr_h = screen.get_size()
+    new_cam_x = tile_col * TILE_SIZE
+    new_cam_y = tile_row * TILE_SIZE
+
+    # clamp
+    max_camera_x = max(0, GRID_WIDTH * TILE_SIZE - scr_w)
+    max_camera_y = max(0, GRID_HEIGHT * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT))
+
+    camera_x = max(0, min(new_cam_x, max_camera_x))
+    camera_y = max(0, min(new_cam_y, max_camera_y))
 
 # --- Fonction de mise à jour des images redimensionnées (INCHANGÉE) ---
 def update_terrain_images():
@@ -428,6 +568,13 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
+            # --- Priorité : clic sur la minimap ---
+            if APP_STATE == "GAME_SCREEN":
+                if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
+                    # On empêche le reste du code de traiter ce clic
+                    is_drawing = False
+                    is_panning = False
+                    continue
 
             if APP_STATE == "START_SCREEN":
                 handle_start_screen_click(mouse_pos)
@@ -445,10 +592,12 @@ while running:
 
                 elif event.button == 4:  # Molette haut (Zoom in)
                     TILE_SIZE = min(64.0, TILE_SIZE + 2.0)
+
                 elif event.button == 5:  # Molette bas (Zoom out)
                     TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
 
         elif event.type == pygame.MOUSEBUTTONUP:
+            minimap_dragging = False
             if event.button == 1:
                 is_drawing = False
             elif event.button == 3:
@@ -457,13 +606,17 @@ while running:
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
 
+            # Priorité : si on est en train de drag la minimap → ignorer le reste
+            if APP_STATE == "GAME_SCREEN" and minimap_dragging:
+                handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
+                continue
+
+            # Panning clic droit
             if APP_STATE == "GAME_SCREEN" and is_panning:
                 dx = mouse_pos[0] - last_mouse_pos[0]
                 dy = mouse_pos[1] - last_mouse_pos[1]
-
                 camera_x -= dx
                 camera_y -= dy
-
                 last_mouse_pos = mouse_pos
 
     # --- LOGIQUE D'AFFICHAGE ---
@@ -483,14 +636,24 @@ while running:
                 world_x = mouse_x + camera_x
                 world_y = mouse_y + camera_y
 
-                grid_col = world_x // TILE_SIZE
-                grid_row = world_y // TILE_SIZE
+                grid_col = int(world_x // TILE_SIZE)
+                grid_row = int(world_y // TILE_SIZE)
 
                 if 0 <= grid_col < GRID_WIDTH and 0 <= grid_row < GRID_HEIGHT:
-                    world_grid[int(grid_row)][int(grid_col)] = CURRENT_TERRAIN
+                    # compute offsets so that we paint an exact CURRENT_BRUSH x CURRENT_BRUSH square
+                    N = int(CURRENT_BRUSH)
+                    start_offset = -(N // 2)
+                    # For even sizes this centers slightly up-left which is expected; you can change anchor if you want top-left.
+                    for dr in range(start_offset, start_offset + N):
+                        for dc in range(start_offset, start_offset + N):
+                            r = grid_row + dr
+                            c = grid_col + dc
+                            if 0 <= r < GRID_HEIGHT and 0 <= c < GRID_WIDTH:
+                                world_grid[r][c] = CURRENT_TERRAIN
 
-        # 3. Dessiner la barre d'outils
+        # 3. Dessiner l'UI
         draw_toolbar(screen_width, grid_bottom_y)
+        draw_minimap(screen_width, grid_bottom_y)
 
     pygame.display.flip()
     clock.tick(60)
