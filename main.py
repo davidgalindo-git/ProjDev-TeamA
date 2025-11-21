@@ -4,7 +4,7 @@ import random
 import math
 import numpy as np
 from opensimplex import OpenSimplex
-from Assets import *  # Assurez-vous que ce dossier existe et contient les images
+from assets import *  # Assurez-vous que ce dossier existe et contient les images
 
 # --- 1. CONFIGURATION STATIQUE ---
 INIT_TILE_SIZE = 16.0
@@ -18,7 +18,7 @@ SCROLL_BUTTON_WIDTH = 50
 DEFAULT_WINDOW_WIDTH = 1000
 DEFAULT_WINDOW_HEIGHT = 700
 
-# Couleurs pour les types de terrain (MAINTENU UNIQUEMENT POUR L'AFFICHAGE DE L'UI)
+# Couleurs pour les types de terrain (MAINTENU UNIQUEMENT POUR L'AFFICHAGE DE L'ui)
 COLORS = {
     0: (0, 0, 200),  # Eau
     1: (0, 150, 0),  # Herbe
@@ -52,17 +52,17 @@ try:
     # J'ai rétabli l'usage des COLORS pour la barre d'outils, car TERRAIN_IMAGES_RAW contient des surfaces.
     # L'erreur de draw_toolbar qui attend une couleur sera corrigée plus bas.
     TERRAIN_IMAGES_RAW = {
-        0: pygame.image.load("Assets/water.png").convert_alpha(),
-        1: pygame.image.load("Assets/grass.png").convert_alpha(),
-        2: pygame.image.load("Assets/dirt.png").convert_alpha(),
-        3: pygame.image.load("Assets/sand.png").convert_alpha(),
-        4: pygame.image.load("Assets/stone.png").convert_alpha(),
+        0: pygame.image.load("assets/water.png").convert_alpha(),
+        1: pygame.image.load("assets/grass.png").convert_alpha(),
+        2: pygame.image.load("assets/dirt.png").convert_alpha(),
+        3: pygame.image.load("assets/sand.png").convert_alpha(),
+        4: pygame.image.load("assets/stone.png").convert_alpha(),
     }
     # J'ai retiré les types 4 (stone/dirt) car ils n'étaient pas définis dans le COLORS ni dans TOOLBAR_BUTTONS.
     # Si vous voulez les utiliser, vous devez mettre à jour COLORS et TOOLBAR_BUTTONS.
 except pygame.error as e:
     print(
-        f"Erreur de chargement d'image : Vérifiez l'existence des fichiers dans 'Assets/'. Erreur: {e}")
+        f"Erreur de chargement d'image : Vérifiez l'existence des fichiers dans 'assets/'. Erreur: {e}")
     sys.exit()
 
 # --- FIN DE L'INITIALISATION RÉORGANISÉE ---
@@ -98,7 +98,7 @@ last_mouse_pos = (0, 0)
 minimap_dragging = False
 minimap_drag_offset = (0, 0)
 
-# Variables de défilement de l'UI
+# Variables de défilement de l'ui
 scroll_offset = 0
 BUTTON_GAP = 10
 BUTTON_BASE_WIDTH = 50
@@ -219,7 +219,7 @@ def generate_random_world():
     world_grid = final_grid.tolist()
 
 
-# --- 4. FONCTIONS UI ET AFFICHAGE ---
+# --- 4. FONCTIONS ui ET AFFICHAGE ---
 
 def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
     """Gère le clic sur les boutons de la barre d'outils."""
@@ -580,7 +580,7 @@ while running:
                 handle_start_screen_click(mouse_pos)
 
             elif APP_STATE == "GAME_SCREEN":
-                if event.button == 1:  # Clic Gauche (Dessin/UI)
+                if event.button == 1:  # Clic Gauche (Dessin/ui)
                     if handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
                         is_drawing = False
                     elif mouse_pos[1] < grid_bottom_y:
@@ -651,7 +651,7 @@ while running:
                             if 0 <= r < GRID_HEIGHT and 0 <= c < GRID_WIDTH:
                                 world_grid[r][c] = CURRENT_TERRAIN
 
-        # 3. Dessiner l'UI
+        # 3. Dessiner l'ui
         draw_toolbar(screen_width, grid_bottom_y)
         draw_minimap(screen_width, grid_bottom_y)
 
