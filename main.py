@@ -4,7 +4,7 @@ import random
 import math
 import numpy as np
 from opensimplex import OpenSimplex
-from assets import *  # Assurez-vous que ce dossier existe et contient les images
+from assets import *
 
 # --- 1. CONFIGURATION STATIQUE ---
 INIT_TILE_SIZE = 16.0
@@ -33,6 +33,14 @@ CURRENT_BRUSH = 1  # default 1x1
 
 TERRAIN_IMAGES_RAW = {}
 TERRAIN_IMAGES = {}
+
+# --- World Time Simulation ---
+world_minutes = 0
+world_hours = 0
+world_days = 0
+display_hours = 0
+# 1 real second = 1 game hour
+GAME_HOURS_PER_SECOND = 1
 
 # --- 2. INITIALISATION PYGAME ET AFFICHAGE (NOUVEL ORDRE) ---
 
@@ -308,6 +316,12 @@ def draw_toolbar(screen_width, grid_bottom_y):
         screen.blit(text_surface, text_rect)
 
     screen.set_clip(None)
+
+def draw_world_time():
+    global display_hours, world_minutes
+    time_text = f"Day {world_days} - {display_hours:02d}:{world_minutes:02d}"
+    text_surface = font.render(time_text, True, (255, 255, 255))
+    screen.blit(text_surface, (20, 20))  # top-left corner
 
 # --- MINIMAP (définir avant la boucle principale) ---
 def draw_minimap(screen_width, grid_bottom_y):
@@ -654,6 +668,21 @@ while running:
         # 3. Dessiner l'ui
         draw_toolbar(screen_width, grid_bottom_y)
         draw_minimap(screen_width, grid_bottom_y)
+        draw_world_time()
+
+    # --- Update world time ---
+    delta_real_seconds = clock.get_time() / 1000  # convert ms to seconds
+
+    # Add hours according to your rule
+    world_hours += delta_real_seconds * GAME_HOURS_PER_SECOND
+
+    # Handle overflow
+    while world_hours >= 24:
+        world_hours -= 24
+        world_days += 1
+
+    world_minutes = int((world_hours % 1) * 60)
+    display_hours = int(world_hours)
 
     pygame.display.flip()
     clock.tick(60)
