@@ -228,6 +228,28 @@ def generate_random_world():
 
 
 # --- 4. FONCTIONS ui ET AFFICHAGE ---
+def timer(world_hours, world_days):
+    # --- Update world time ---
+    delta_real_seconds = clock.get_time() / 1000  # convert ms to seconds
+
+    # Add hours according to your rule
+    world_hours += delta_real_seconds * GAME_HOURS_PER_SECOND
+
+    # Handle overflow
+    while world_hours >= 24:
+        world_hours -= 24
+        world_days += 1
+
+    world_minutes = int((world_hours % 1) * 60)
+    display_hours = int(world_hours)
+
+    return world_hours, world_days, display_hours, world_minutes
+
+def draw_timer(hours, minutes, days):
+    global display_hours, world_minutes
+    time_text = f"Day {days} - {hours:02d}:{minutes:02d}"
+    text_surface = font.render(time_text, True, (255, 255, 255))
+    screen.blit(text_surface, (20, 20))  # top-left corner
 
 def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
     """Gère le clic sur les boutons de la barre d'outils."""
@@ -316,12 +338,6 @@ def draw_toolbar(screen_width, grid_bottom_y):
         screen.blit(text_surface, text_rect)
 
     screen.set_clip(None)
-
-def draw_world_time():
-    global display_hours, world_minutes
-    time_text = f"Day {world_days} - {display_hours:02d}:{world_minutes:02d}"
-    text_surface = font.render(time_text, True, (255, 255, 255))
-    screen.blit(text_surface, (20, 20))  # top-left corner
 
 # --- MINIMAP (définir avant la boucle principale) ---
 def draw_minimap(screen_width, grid_bottom_y):
@@ -640,8 +656,9 @@ while running:
         draw_start_screen(screen_width, screen_height)
 
     elif APP_STATE == "GAME_SCREEN":
-        # 1. Dessiner le monde (maintenant avec des images)
+        # 1. Dessiner le monde (maintenant avec des images) et démarrer timer
         draw_world(screen_width, grid_bottom_y)
+        timer_active = True
 
         # 2. Application du Pinceau (Dessin)
         if is_drawing:
@@ -664,25 +681,13 @@ while running:
                             c = grid_col + dc
                             if 0 <= r < GRID_HEIGHT and 0 <= c < GRID_WIDTH:
                                 world_grid[r][c] = CURRENT_TERRAIN
+        if timer_active:
+            world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
 
         # 3. Dessiner l'ui
         draw_toolbar(screen_width, grid_bottom_y)
         draw_minimap(screen_width, grid_bottom_y)
-        draw_world_time()
-
-    # --- Update world time ---
-    delta_real_seconds = clock.get_time() / 1000  # convert ms to seconds
-
-    # Add hours according to your rule
-    world_hours += delta_real_seconds * GAME_HOURS_PER_SECOND
-
-    # Handle overflow
-    while world_hours >= 24:
-        world_hours -= 24
-        world_days += 1
-
-    world_minutes = int((world_hours % 1) * 60)
-    display_hours = int(world_hours)
+        draw_timer(display_hours, world_minutes, world_days)
 
     pygame.display.flip()
     clock.tick(60)
