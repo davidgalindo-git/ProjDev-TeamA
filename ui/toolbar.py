@@ -21,21 +21,28 @@ TOOLBAR_BUTTONS = [
 ]
 
 def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
-    if mouse_pos[1] > grid_bottom_y:
+
+    if mouse_pos[1] < grid_bottom_y:
         return False
-    # scroll not implemented here (kept simple)
+
     x = mouse_pos[0]
-    # simple button mapping by x ranges
-    btn_width = BUTTON_BASE_WIDTH + BUTTON_GAP
-    idx = int(x // btn_width)
-    if 0 <= idx < len(TOOLBAR_BUTTONS):
-        btn = TOOLBAR_BUTTONS[idx]
-        if "brush" in btn:
-            state["current_brush"] = int(btn["brush"])
-        else:
-            state["current_terrain"] = int(btn["type"])
-        return True
+
+
+    for i, btn in enumerate(TOOLBAR_BUTTONS):
+        btn_x = SCROLL_BUTTON_WIDTH + (i*(BUTTON_BASE_WIDTH+BUTTON_GAP)) - state.get("scroll_offset",0)
+        btn_rect = pygame.Rect(btn_x, grid_bottom_y + BUTTON_GAP/2,
+                               BUTTON_BASE_WIDTH, TOOLBAR_HEIGHT - BUTTON_GAP)
+
+        if btn_rect.collidepoint(mouse_pos):
+
+            if "brush" in btn:
+                state["current_brush"] = int(btn["brush"])
+            else:
+                state["current_terrain"] = int(btn["type"])
+            return True
+
     return False
+
 
 def draw_toolbar(screen, screen_width, grid_bottom_y):
     pygame.draw.rect(screen, (50,50,50), (0, grid_bottom_y, screen_width, TOOLBAR_HEIGHT))

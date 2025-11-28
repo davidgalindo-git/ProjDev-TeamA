@@ -35,11 +35,13 @@ def set_app_state(new_state):
 
 # Unified UI state dictionary (toolbar & UI için)
 state = {
-    "selected_terrain": CURRENT_TERRAIN,
-    "selected_brush": CURRENT_BRUSH,
+    "current_terrain": CURRENT_TERRAIN,
+    "current_brush": CURRENT_BRUSH,
     "app_state": APP_STATE,
     "is_panning": is_panning,
-    "tile_size": TILE_SIZE
+    "tile_size": TILE_SIZE,
+    "camera_x": camera_x,
+    "camera_y": camera_y
 }
 
 
