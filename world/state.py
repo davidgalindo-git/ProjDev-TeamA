@@ -32,3 +32,14 @@ APP_STATE = APP_START
 def set_app_state(new_state):
     global APP_STATE
     APP_STATE = new_state
+
+# Unified UI state dictionary (toolbar & UI için)
+state = {
+    "selected_terrain": CURRENT_TERRAIN,
+    "selected_brush": CURRENT_BRUSH,
+    "app_state": APP_STATE,
+    "is_panning": is_panning,
+    "tile_size": TILE_SIZE
+}
+
+

@@ -9,16 +9,21 @@ from world.state import (
 from assets.terrain_images import terrain_images
 
 
-def update_terrain_images():
+def update_terrain_images(raw_images, tile_size):
     """
-    Re-scale terrain images based on TILE_SIZE.
+    Re-scale terrain images based on tile size.
     """
-    for key in terrain_images:
-        img = terrain_images[key]
-        terrain_images[key] = pygame.transform.scale(img, (int(TILE_SIZE), int(TILE_SIZE)))
+    scaled = {}
+
+    for key, img in raw_images.items():
+        scaled[key] = pygame.transform.scale(
+            img, (int(tile_size), int(tile_size))
+        )
+
+    return scaled
 
 
-def draw_world(screen):
+def draw_world(screen,terrain_images):
     """
     Draw the full world grid based on camera position and tile size.
     """
@@ -27,6 +32,8 @@ def draw_world(screen):
     for y in range(GRID_HEIGHT):
         for x in range(GRID_WIDTH):
             tile = world_grid[y][x]
+
+
             img = terrain_images.get(tile)
 
             if img:
