@@ -43,9 +43,9 @@ display_hours = 0
 # 1 real second = 1 game hour
 GAME_HOURS_PER_SECOND = 1
 # buttons
-timer_button = pygame.Rect(20, 60, 120, 40)
+timer_button = pygame.Rect(20, 20, 120, 40)
 # Position the time bar at the top of the screen
-TIME_BAR_RECT = pygame.Rect(160, 65, 400, 20)  # x, y, width, height
+TIME_BAR_RECT = pygame.Rect(150, 60, 400, 20)  # x, y, width, height
 
 # --- 2. INITIALISATION PYGAME ET AFFICHAGE (NOUVEL ORDRE) ---
 
@@ -250,11 +250,12 @@ def timer(world_hours, world_days):
 
     return world_hours, world_days, display_hours, world_minutes
 
-def draw_timer(hours, minutes, days):
+def draw_timer(days):
     global display_hours, world_minutes, timer_active
-    time_text = f"Day {days} - {hours:02d}:{minutes:02d}"
+    draw_time_bar()
+    time_text = f"Day {days}"
     text_surface = font.render(time_text, True, (255, 255, 255))
-    screen.blit(text_surface, (20, 20))  # top-left corner
+    screen.blit(text_surface, (150, 20))  # days position
 
     # --- TIMER CONTROL BUTTON (toggle) ---
     btn_color = (200, 50, 50) if timer_active else (50, 200, 50)
@@ -264,23 +265,38 @@ def draw_timer(hours, minutes, days):
     screen.blit(text_surf, (timer_button.x + 10, timer_button.y + 10))
 
 def draw_time_bar():
-    """Draw the timeline bar showing current world time."""
-    global world_hours, world_days
+    """Draw the timeline bar showing current world time with hours:minutes centered."""
+    global world_hours, world_minutes
 
-    # Background
+    # Background of the bar
     pygame.draw.rect(screen, (100, 100, 100), TIME_BAR_RECT, border_radius=5)
 
-    # Calculate percentage of day passed (0-24 hours)
+    # Fill portion of the bar (progress of the day)
     day_progress = world_hours / 24.0
     fill_width = int(TIME_BAR_RECT.width * day_progress)
-
-    # Fill portion of the bar
     pygame.draw.rect(screen, (50, 200, 50), (TIME_BAR_RECT.x, TIME_BAR_RECT.y, fill_width, TIME_BAR_RECT.height), border_radius=5)
 
-    # Optional: draw handle
+    # Handle (small red rectangle)
     handle_x = TIME_BAR_RECT.x + fill_width
     pygame.draw.rect(screen, (255, 0, 0), (handle_x - 3, TIME_BAR_RECT.y - 2, 6, TIME_BAR_RECT.height + 4))
 
+    # Draw the time in the middle of the bar
+    time_text = f"{int(world_hours):02d}:{int(world_minutes):02d}"
+    text_surface = font.render(time_text, True, (255, 255, 255))
+    text_rect = text_surface.get_rect(center=TIME_BAR_RECT.center)
+    screen.blit(text_surface, text_rect)
+
+def update_time_from_bar(mouse_x):
+    global world_hours, world_minutes
+    # Clamp x inside the bar
+    x = max(TIME_BAR_RECT.x, min(mouse_x, TIME_BAR_RECT.x + TIME_BAR_RECT.width))
+
+    # Fraction of the bar
+    fraction = (x - TIME_BAR_RECT.x) / TIME_BAR_RECT.width
+
+    # Set world_hours as float (fractional)
+    world_hours = fraction * 24.0
+    world_minutes = int((world_hours % 1) * 60)
 
 def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
     """Gère le clic sur les boutons de la barre d'outils."""
@@ -615,7 +631,7 @@ def handle_start_screen_click(mouse_pos):
 
 running = True
 is_drawing = False
-is_dragging_time = False
+time_bar_dragging = False
 
 while running:
     screen_width, screen_height, grid_bottom_y = get_dimensions()
@@ -635,7 +651,7 @@ while running:
                 timer_active = not timer_active # toggle
 
             if TIME_BAR_RECT.collidepoint(event.pos):
-                is_dragging_time = True
+                time_bar_dragging = True
                 timer_active = False  # pause time while scrubbing
                 # immediately set time based on click
                 rel_x = (event.pos[0] - TIME_BAR_RECT.x) / TIME_BAR_RECT.width
@@ -670,7 +686,7 @@ while running:
                     TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
 
         elif event.type == pygame.MOUSEBUTTONUP:
-            is_dragging_time = False
+            time_bar_dragging = False
             minimap_dragging = False
             if event.button == 1:
                 is_drawing = False
@@ -679,10 +695,8 @@ while running:
 
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
-            if is_dragging_time:
-                rel_x = (event.pos[0] - TIME_BAR_RECT.x) / TIME_BAR_RECT.width
-                rel_x = max(0, min(1, rel_x))
-                world_hours = rel_x * 24
+            if time_bar_dragging:
+                update_time_from_bar(event.pos[0])
 
             # Priorité : si on est en train de drag la minimap → ignorer le reste
             if APP_STATE == "GAME_SCREEN" and minimap_dragging:
@@ -734,8 +748,7 @@ while running:
         # 3. Dessiner l'ui
         draw_toolbar(screen_width, grid_bottom_y)
         draw_minimap(screen_width, grid_bottom_y)
-        draw_timer(display_hours, world_minutes, world_days)
-        draw_time_bar()
+        draw_timer(world_days)
 
     pygame.display.flip()
     clock.tick(60)
