@@ -1,0 +1,35 @@
+import pygame
+# Window
+DEFAULT_WINDOW_WIDTH = 1000
+DEFAULT_WINDOW_HEIGHT = 700
+TOOLBAR_HEIGHT = 60
+SCROLL_BUTTON_WIDTH = 50
+
+# World grid
+GRID_WIDTH = 100
+GRID_HEIGHT = 80
+INIT_TILE_SIZE = 16.0
+
+# Brush sizes (tile counts)
+BRUSH_SIZES = [1, 2, 4, 8, 16, 32]
+DEFAULT_BRUSH = 1
+
+# Terrain types (match assets names)
+TERRAIN_WATER = 0
+TERRAIN_GRASS = 1
+TERRAIN_DIRT = 2
+TERRAIN_SAND = 3
+TERRAIN_STONE = 4
+
+# Fallback colors (UI / minimap)
+COLORS = {
+    TERRAIN_WATER: (0, 0, 200),
+    TERRAIN_GRASS: (0, 150, 0),
+    TERRAIN_DIRT: (150, 75, 0),
+    TERRAIN_SAND: (240, 230, 140),
+    TERRAIN_STONE: (120, 120, 120),
+}
+
+# App states
+APP_START = "START_SCREEN"
+APP_GAME = "GAME_SCREEN"
