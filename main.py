@@ -35,12 +35,15 @@ TERRAIN_IMAGES_RAW = {}
 TERRAIN_IMAGES = {}
 
 # --- World Time Simulation ---
+timer_active = False
 world_minutes = 0
 world_hours = 0
 world_days = 0
 display_hours = 0
 # 1 real second = 1 game hour
 GAME_HOURS_PER_SECOND = 1
+# buttons
+timer_button = pygame.Rect(20, 60, 120, 40)
 
 # --- 2. INITIALISATION PYGAME ET AFFICHAGE (NOUVEL ORDRE) ---
 
@@ -246,10 +249,17 @@ def timer(world_hours, world_days):
     return world_hours, world_days, display_hours, world_minutes
 
 def draw_timer(hours, minutes, days):
-    global display_hours, world_minutes
+    global display_hours, world_minutes, timer_active
     time_text = f"Day {days} - {hours:02d}:{minutes:02d}"
     text_surface = font.render(time_text, True, (255, 255, 255))
     screen.blit(text_surface, (20, 20))  # top-left corner
+
+    # --- TIMER CONTROL BUTTON (toggle) ---
+    btn_color = (200, 50, 50) if timer_active else (50, 200, 50)
+    pygame.draw.rect(screen, btn_color, timer_button)
+    button_text = "STOP" if timer_active else "PLAY"
+    text_surf = font.render(button_text, True, (255, 255, 255))
+    screen.blit(text_surf, (timer_button.x + 10, timer_button.y + 10))
 
 def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
     """Gère le clic sur les boutons de la barre d'outils."""
@@ -598,6 +608,10 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
+
+            if timer_button.collidepoint(event.pos):
+                timer_active = not timer_active # toggle
+
             # --- Priorité : clic sur la minimap ---
             if APP_STATE == "GAME_SCREEN":
                 if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
@@ -658,7 +672,6 @@ while running:
     elif APP_STATE == "GAME_SCREEN":
         # 1. Dessiner le monde (maintenant avec des images) et démarrer timer
         draw_world(screen_width, grid_bottom_y)
-        timer_active = True
 
         # 2. Application du Pinceau (Dessin)
         if is_drawing:
