@@ -36,6 +36,7 @@ TERRAIN_IMAGES = {}
 
 # --- World Time Simulation ---
 timer_active = False
+MAX_DAYS = 1000
 world_minutes = 0
 world_hours = 0
 world_days = 0
@@ -44,8 +45,10 @@ display_hours = 0
 GAME_HOURS_PER_SECOND = 1
 # buttons
 timer_button = pygame.Rect(20, 20, 120, 40)
-# Position the time bar at the top of the screen
+# Time bar
 TIME_BAR_RECT = pygame.Rect(150, 60, 400, 20)  # x, y, width, height
+# Day bar
+DAY_BAR_RECT = pygame.Rect(150, 20, 400, 20)  # x, y, width, height
 
 # --- 2. INITIALISATION PYGAME ET AFFICHAGE (NOUVEL ORDRE) ---
 
@@ -253,9 +256,7 @@ def timer(world_hours, world_days):
 def draw_timer(days):
     global display_hours, world_minutes, timer_active
     draw_time_bar()
-    time_text = f"Day {days}"
-    text_surface = font.render(time_text, True, (255, 255, 255))
-    screen.blit(text_surface, (150, 20))  # days position
+    draw_day_bar()
 
     # --- TIMER CONTROL BUTTON (toggle) ---
     btn_color = (200, 50, 50) if timer_active else (50, 200, 50)
@@ -297,6 +298,53 @@ def update_time_from_bar(mouse_x):
     # Set world_hours as float (fractional)
     world_hours = fraction * 24.0
     world_minutes = int((world_hours % 1) * 60)
+
+def draw_day_bar():
+    global world_days
+
+    # Draw background bar
+    pygame.draw.rect(screen, (100, 100, 100), DAY_BAR_RECT, border_radius=5)
+
+    # Compute fill width from world_days
+    fraction = world_days / MAX_DAYS
+    fill_width = int(DAY_BAR_RECT.width * fraction)
+
+    # Fill bar
+    pygame.draw.rect(screen, (50, 200, 50), (DAY_BAR_RECT.x, DAY_BAR_RECT.y, fill_width, DAY_BAR_RECT.height), border_radius=5)
+
+    # Draw handle
+    handle_x = DAY_BAR_RECT.x + fill_width
+    pygame.draw.rect(screen, (255, 0, 0), (handle_x - 3, DAY_BAR_RECT.y - 2, 6, DAY_BAR_RECT.height + 4))
+
+    # Affichage du nombre de jours
+    day_text = f"Day {world_days}"
+    text_surface = font.render(day_text, True, (255,255,255))
+    text_rect = text_surface.get_rect(center=DAY_BAR_RECT.center)
+    screen.blit(text_surface, text_rect)
+
+
+def update_day_from_bar(mouse_pos):
+    global world_days
+
+    mouse_x = mouse_pos[0]  # extract X coordinate
+
+    # Clamp X inside the bar
+    x = max(DAY_BAR_RECT.x, min(mouse_x, DAY_BAR_RECT.x + DAY_BAR_RECT.width))
+
+    # Fraction along the bar (0 to 1)
+    fraction = (x - DAY_BAR_RECT.x) / DAY_BAR_RECT.width
+
+    # Set world_days according to fraction of max
+    world_days = int(fraction * MAX_DAYS)
+
+def handle_day_bar_click(mouse_pos):
+    global day_bar_dragging
+    if DAY_BAR_RECT.collidepoint(mouse_pos):
+        day_bar_dragging = True
+        update_day_from_bar(mouse_pos)
+        return True
+    return False
+
 
 def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
     """Gère le clic sur les boutons de la barre d'outils."""
@@ -632,6 +680,8 @@ def handle_start_screen_click(mouse_pos):
 running = True
 is_drawing = False
 time_bar_dragging = False
+day_bar_dragging = False
+minimap_dragging = False
 
 while running:
     screen_width, screen_height, grid_bottom_y = get_dimensions()
@@ -656,6 +706,8 @@ while running:
                 # immediately set time based on click
                 rel_x = (event.pos[0] - TIME_BAR_RECT.x) / TIME_BAR_RECT.width
                 world_hours = rel_x * 24
+
+            handle_day_bar_click(event.pos)
 
             # --- Priorité : clic sur la minimap ---
             if APP_STATE == "GAME_SCREEN":
@@ -686,10 +738,12 @@ while running:
                     TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
 
         elif event.type == pygame.MOUSEBUTTONUP:
-            time_bar_dragging = False
-            minimap_dragging = False
             if event.button == 1:
                 is_drawing = False
+                is_dragging = False
+                time_bar_dragging = False
+                day_bar_dragging = False
+                minimap_dragging = False
             elif event.button == 3:
                 is_panning = False
 
@@ -697,6 +751,8 @@ while running:
             mouse_pos = pygame.mouse.get_pos()
             if time_bar_dragging:
                 update_time_from_bar(event.pos[0])
+            if day_bar_dragging:
+                update_day_from_bar(event.pos)
 
             # Priorité : si on est en train de drag la minimap → ignorer le reste
             if APP_STATE == "GAME_SCREEN" and minimap_dragging:
