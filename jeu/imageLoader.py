@@ -1,10 +1,5 @@
-# Fichier : jeu/imageLoader.py (CORRECTION INTÉGRALE)
-
 import pygame
 import sys
-# Utilise les imports ABSOLUS directs pour les constantes (comme dans worldManagement)
-from config_cg import INIT_TILE_SIZE
-
 ASSETS_PATH = "assets/"
 
 
