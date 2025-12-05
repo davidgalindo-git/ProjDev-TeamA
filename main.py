@@ -4,6 +4,8 @@ import random
 import math
 import numpy as np
 from opensimplex import OpenSimplex
+from rendering.draw_element_cg import draw_elements
+
 from assets import *  # Assurez-vous que ce dossier existe et contient les images
 
 # --- 1. CONFIGURATION STATIQUE ---
@@ -18,13 +20,22 @@ SCROLL_BUTTON_WIDTH = 50
 DEFAULT_WINDOW_WIDTH = 1000
 DEFAULT_WINDOW_HEIGHT = 700
 
+# Paramètres pour la grille de placement d'éléments fins (8x8)
+ELEMENT_GRID_SIZE = 8  # La taille de la sous-cellule en pixels (moitié de 16)
+ELEMENT_SCALE_FACTOR = int(INIT_TILE_SIZE / ELEMENT_GRID_SIZE)  # 16 / 8 = 2
+
+# Dimensions de la grille d'éléments (double de la grille de terrain)
+ELEMENT_GRID_WIDTH = GRID_WIDTH * ELEMENT_SCALE_FACTOR  # 200
+ELEMENT_GRID_HEIGHT = GRID_HEIGHT * ELEMENT_SCALE_FACTOR  # 160
+
 # Couleurs pour les types de terrain (MAINTENU UNIQUEMENT POUR L'AFFICHAGE DE L'ui)
 COLORS = {
     0: (0, 0, 200),  # Eau
     1: (0, 150, 0),  # Herbe
     2: (150, 75, 0),  # Montagne
     3: (240, 230, 140),  # Sable
-    4: (120, 120, 120)  # Pierre
+    4: (120, 120, 120), # Pierre
+    -1: (200, 50, 50)
 }
 
 # --- Brush Sizes ---
@@ -49,17 +60,15 @@ screen = pygame.display.set_mode((DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT), 
 
 # 3. Charger les images (Maintenant que le mode vidéo est défini)
 try:
-    # J'ai rétabli l'usage des COLORS pour la barre d'outils, car TERRAIN_IMAGES_RAW contient des surfaces.
-    # L'erreur de draw_toolbar qui attend une couleur sera corrigée plus bas.
     TERRAIN_IMAGES_RAW = {
         0: pygame.image.load("assets/water.png").convert_alpha(),
         1: pygame.image.load("assets/grass.png").convert_alpha(),
         2: pygame.image.load("assets/dirt.png").convert_alpha(),
         3: pygame.image.load("assets/sand.png").convert_alpha(),
         4: pygame.image.load("assets/stone.png").convert_alpha(),
+        5: pygame.image.load("assets/S_rock1.png").convert_alpha(),
+
     }
-    # J'ai retiré les types 4 (stone/dirt) car ils n'étaient pas définis dans le COLORS ni dans TOOLBAR_BUTTONS.
-    # Si vous voulez les utiliser, vous devez mettre à jour COLORS et TOOLBAR_BUTTONS.
 except pygame.error as e:
     print(
         f"Erreur de chargement d'image : Vérifiez l'existence des fichiers dans 'assets/'. Erreur: {e}")
@@ -70,11 +79,13 @@ except pygame.error as e:
 
 # Définition des boutons dans la barre d'outils
 TOOLBAR_BUTTONS = [
+    {"type": -1, "label":"gomme"},
     {"type": 0, "label": "Water"},
     {"type": 1, "label": "Grass"},
     {"type": 2, "label": "Dirt"},
     {"type": 3, "label": "Sand"},
     {"type": 4, "label": "Stone"},
+    {"type": 5, "label": "S_rock1 (8x8)"},
     {"type": "BRUSH_1", "label": "x1", "brush": 1},
     {"type": "BRUSH_2", "label": "x2", "brush": 2},
     {"type": "BRUSH_3", "label": "x4", "brush": 4},
@@ -84,7 +95,6 @@ TOOLBAR_BUTTONS = [
 ]
 
 CURRENT_TERRAIN = TOOLBAR_BUTTONS[0]["type"]
-
 
 # --- ÉTATS DE L'APPLICATION ---
 APP_STATE = "START_SCREEN"
@@ -107,6 +117,8 @@ BUTTON_HEIGHT = TOOLBAR_HEIGHT - BUTTON_GAP
 # Créer la grille (carte)
 world_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
 
+# --- NOUVEAU : Grille pour les éléments 8x8 ---
+element_grid = np.zeros((ELEMENT_GRID_HEIGHT, ELEMENT_GRID_WIDTH), dtype=int).tolist()
 # Fonts
 font = pygame.font.Font(None, 32)
 title_font = pygame.font.Font(None, 48)
@@ -265,6 +277,7 @@ def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
 
     return False
 
+
 def draw_toolbar(screen_width, grid_bottom_y):
     """Dessine la barre d'outils et les boutons de brush."""
     toolbar_rect = pygame.Rect(0, grid_bottom_y, screen_width, TOOLBAR_HEIGHT)
@@ -308,6 +321,7 @@ def draw_toolbar(screen_width, grid_bottom_y):
         screen.blit(text_surface, text_rect)
 
     screen.set_clip(None)
+
 
 # --- MINIMAP (définir avant la boucle principale) ---
 def draw_minimap(screen_width, grid_bottom_y):
@@ -403,6 +417,7 @@ def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
 
     return True
 
+
 def handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y):
     global camera_x, camera_y, minimap_dragging
 
@@ -440,6 +455,7 @@ def handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y):
     camera_x = max(0, min(new_cam_x, max_camera_x))
     camera_y = max(0, min(new_cam_y, max_camera_y))
 
+
 # --- Fonction de mise à jour des images redimensionnées (INCHANGÉE) ---
 def update_terrain_images():
     """Redimensionne toutes les textures pour correspondre à la TILE_SIZE actuelle."""
@@ -459,7 +475,7 @@ def update_terrain_images():
 
 
 def draw_world(screen_width, grid_bottom_y):
-    """Dessine la grille visible en utilisant les images redimensionnées (INCHANGÉE)."""
+    """Dessine la grille visible en utilisant les images redimensionnées (REMIS À JOUR)."""
     global camera_x, camera_y
     global TILE_SIZE
 
@@ -535,22 +551,26 @@ def draw_start_screen(screen_width, screen_height):
 
 
 def handle_start_screen_click(mouse_pos):
-    global APP_STATE, world_grid
+    global APP_STATE, world_grid, element_grid # <-- S'assurer que element_grid est là
 
     for btn in START_BUTTONS:
         if btn["rect"].collidepoint(mouse_pos):
             if btn["action"] == "NEW":
                 world_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int).tolist()
+                element_grid = np.zeros((ELEMENT_GRID_HEIGHT, ELEMENT_GRID_WIDTH), dtype=int).tolist()
                 APP_STATE = "GAME_SCREEN"
 
             elif btn["action"] == "RANDOM":
                 generate_random_world()
+                element_grid = np.zeros((ELEMENT_GRID_HEIGHT, ELEMENT_GRID_WIDTH), dtype=int).tolist()
                 APP_STATE = "GAME_SCREEN"
             return True
     return False
 
 
-# --- 6. BOUCLE PRINCIPALE DE JEU (INCHANGÉE) ---
+# --- 6. BOUCLE PRINCIPALE DE JEU (MAINTENANT AVEC LE CODE CORRIGÉ) ---
+
+# --- 6. BOUCLE PRINCIPALE DE JEU (MAINTENANT CORRIGÉE) ---
 
 running = True
 is_drawing = False
@@ -558,6 +578,9 @@ is_drawing = False
 while running:
     screen_width, screen_height, grid_bottom_y = get_dimensions()
 
+    # **********************************************
+    # *** 1. GESTION DES ÉVÉNEMENTS ***
+    # **********************************************
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -566,35 +589,132 @@ while running:
             if event.key == pygame.K_F11:
                 toggle_fullscreen()
 
+
         elif event.type == pygame.MOUSEBUTTONDOWN:
+
             mouse_pos = pygame.mouse.get_pos()
-            # --- Priorité : clic sur la minimap ---
-            if APP_STATE == "GAME_SCREEN":
-                if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
-                    # On empêche le reste du code de traiter ce clic
-                    is_drawing = False
-                    is_panning = False
-                    continue
 
             if APP_STATE == "START_SCREEN":
                 handle_start_screen_click(mouse_pos)
 
-            elif APP_STATE == "GAME_SCREEN":
-                if event.button == 1:  # Clic Gauche (Dessin/ui)
-                    if handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
-                        is_drawing = False
-                    elif mouse_pos[1] < grid_bottom_y:
-                        is_drawing = True
+                continue
 
-                elif event.button == 3:  # Clic Droit (Déplacement)
-                    is_panning = True
-                    last_mouse_pos = mouse_pos
+            # --- Dans l'écran de jeu ---
 
-                elif event.button == 4:  # Molette haut (Zoom in)
+            if APP_STATE == "GAME_SCREEN":
+
+                # 1. Priorité : Minimap
+
+                if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
+                    is_drawing = False
+
+                    is_panning = False
+
+                    continue
+
+                # 2. Zoom (Molette)
+
+                if event.button == 4:  # Molette haut (Zoom in)
+
                     TILE_SIZE = min(64.0, TILE_SIZE + 2.0)
 
+                    continue
+
                 elif event.button == 5:  # Molette bas (Zoom out)
+
                     TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
+
+                    continue
+
+
+                # 3. Clic Gauche (Dessin/ui)
+
+                elif event.button == 1:
+
+                    # Clic sur la barre d'outils?
+
+                    if handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
+
+                        is_drawing = False
+
+
+                    # Clic sur la grille?
+
+                    elif mouse_pos[1] < grid_bottom_y:
+
+                        world_x = mouse_pos[0] + camera_x
+
+                        world_y = mouse_pos[1] + camera_y
+
+                        # --- Placement de TERRAIN 16x16 (Active le dessin continu) ---
+
+                        if CURRENT_TERRAIN < 5:
+
+                            is_drawing = True
+
+
+                        # --- Placement d'ÉLÉMENT 8x8 (Rocher) : Clic unique ---
+
+                        elif CURRENT_TERRAIN == 5:
+
+                            # Calcul dynamique de la taille de la cellule 8x8 en pixels écran/monde
+
+                            # TILE_SIZE est la taille du 16x16. La cellule 8x8 est TILE_SIZE / 2.
+
+                            # CECI EST LE BLOC À CHANGER DANS VOTRE CODE ACTUEL
+
+                            cell_8x8_size = TILE_SIZE / ELEMENT_SCALE_FACTOR
+
+                            grid_col_el = int(world_x // cell_8x8_size)
+
+                            grid_row_el = int(world_y // cell_8x8_size)
+
+                            if (0 <= grid_col_el < ELEMENT_GRID_WIDTH and
+
+                                    0 <= grid_row_el < ELEMENT_GRID_HEIGHT):
+
+                                # Placement anti-chevauchement
+
+                                if element_grid[grid_row_el][grid_col_el] == 0:
+                                    element_grid[grid_row_el][grid_col_el] = 5
+
+                            is_drawing = False
+
+                # 4. Clic Droit (Déplacement ou Effacement 8x8)
+
+                elif event.button == 3:
+
+                    world_x = mouse_pos[0] + camera_x
+
+                    world_y = mouse_pos[1] + camera_y
+
+                    # Tenter l'effacement 8x8 si l'outil 'Rocher' est sélectionné
+
+                    if CURRENT_TERRAIN == 5 and mouse_pos[1] < grid_bottom_y:
+
+                        # Calcul dynamique de la taille de la cellule 8x8
+
+                        cell_8x8_size = TILE_SIZE / ELEMENT_SCALE_FACTOR
+
+                        grid_col_el = int(world_x // cell_8x8_size)
+
+                        grid_row_el = int(world_y // cell_8x8_size)
+
+                        if (0 <= grid_col_el < ELEMENT_GRID_WIDTH and
+
+                                0 <= grid_row_el < ELEMENT_GRID_HEIGHT and
+
+                                element_grid[grid_row_el][grid_col_el] != 0):
+                            element_grid[grid_row_el][grid_col_el] = 0
+
+                            continue  # Si effacement, ne pas activer le Panning
+
+                    # Sinon, activer le Panning (Déplacement)
+
+                    is_panning = True
+
+                    last_mouse_pos = mouse_pos
+
 
         elif event.type == pygame.MOUSEBUTTONUP:
             minimap_dragging = False
@@ -606,44 +726,79 @@ while running:
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
 
-            # Priorité : si on est en train de drag la minimap → ignorer le reste
-            if APP_STATE == "GAME_SCREEN" and minimap_dragging:
-                handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
-                continue
+            if APP_STATE == "GAME_SCREEN":
+                # Priorité : Drag de la minimap
+                if minimap_dragging:
+                    handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
+                    continue
 
-            # Panning clic droit
-            if APP_STATE == "GAME_SCREEN" and is_panning:
-                dx = mouse_pos[0] - last_mouse_pos[0]
-                dy = mouse_pos[1] - last_mouse_pos[1]
-                camera_x -= dx
-                camera_y -= dy
-                last_mouse_pos = mouse_pos
+                # Panning clic droit
+                if is_panning:
+                    dx = mouse_pos[0] - last_mouse_pos[0]
+                    dy = mouse_pos[1] - last_mouse_pos[1]
+                    camera_x -= dx
+                    camera_y -= dy
+                    last_mouse_pos = mouse_pos
 
-    # --- LOGIQUE D'AFFICHAGE ---
+                # Dessin continu (Clic gauche maintenu)
+                elif is_drawing and CURRENT_TERRAIN < 5:
+                    # Le code de dessin est dans la logique d'affichage ci-dessous pour le MOUSEMOTION
+
+                    # Note : La logique de dessin continu est mieux gérée dans le bloc d'affichage
+                    # en utilisant la variable is_drawing et la position actuelle de la souris.
+                    pass
+
+                    # **********************************************
+    # *** 2. LOGIQUE D'AFFICHAGE ***
+    # **********************************************
     screen.fill((0, 0, 0))
 
     if APP_STATE == "START_SCREEN":
         draw_start_screen(screen_width, screen_height)
 
     elif APP_STATE == "GAME_SCREEN":
-        # 1. Dessiner le monde (maintenant avec des images)
+
+        # 1. Dessiner le monde (Terrain 16x16)
         draw_world(screen_width, grid_bottom_y)
 
-        # 2. Application du Pinceau (Dessin)
-        if is_drawing:
+        # 2. --- Dessiner les éléments 8x8 PAR DESSUS ---
+        # Le code est correct et réutilisé tel quel
+        WorldData = type('World', (object,), {
+            'tile_size': TILE_SIZE,
+            'camera_x': camera_x,
+            'camera_y': camera_y,
+            'INIT_TILE_SIZE': INIT_TILE_SIZE,
+            'ELEMENT_GRID_SIZE': ELEMENT_GRID_SIZE,
+            'TOOLBAR_HEIGHT': TOOLBAR_HEIGHT,
+            'GRID_WIDTH': GRID_WIDTH,
+            'GRID_HEIGHT': GRID_HEIGHT
+        })
+
+        draw_elements(
+            screen,
+            WorldData,
+            element_grid,
+            TERRAIN_IMAGES_RAW,
+            is_drawing and CURRENT_TERRAIN == 5,  # is_drawing pour l'élément 8x8 est toujours Faux ici.
+            5
+        )
+        # ----------------------------------------------------
+
+        # 3. Application du Pinceau (Dessin CONTINU - Terrain 16x16 uniquement)
+        if is_drawing and CURRENT_TERRAIN < 5:
             mouse_x, mouse_y = pygame.mouse.get_pos()
             if mouse_y < grid_bottom_y:
                 world_x = mouse_x + camera_x
                 world_y = mouse_y + camera_y
 
+                # Placement 16x16 (Terrain)
                 grid_col = int(world_x // TILE_SIZE)
                 grid_row = int(world_y // TILE_SIZE)
 
                 if 0 <= grid_col < GRID_WIDTH and 0 <= grid_row < GRID_HEIGHT:
-                    # compute offsets so that we paint an exact CURRENT_BRUSH x CURRENT_BRUSH square
+                    # Logique du pinceau 16x16
                     N = int(CURRENT_BRUSH)
                     start_offset = -(N // 2)
-                    # For even sizes this centers slightly up-left which is expected; you can change anchor if you want top-left.
                     for dr in range(start_offset, start_offset + N):
                         for dc in range(start_offset, start_offset + N):
                             r = grid_row + dr
@@ -651,7 +806,7 @@ while running:
                             if 0 <= r < GRID_HEIGHT and 0 <= c < GRID_WIDTH:
                                 world_grid[r][c] = CURRENT_TERRAIN
 
-        # 3. Dessiner l'ui
+        # 4. Dessiner l'ui
         draw_toolbar(screen_width, grid_bottom_y)
         draw_minimap(screen_width, grid_bottom_y)
 
