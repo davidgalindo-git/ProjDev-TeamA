@@ -15,3 +15,9 @@
 # 28.11.2025
 
 ### Ahmet: refactor code
+### Pang : IceScrum
+
+# 05.12.2025
+
+### Pang : IceScrum, améliorer interface du jeux
+### Ahmet : malade
