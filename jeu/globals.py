@@ -1,14 +1,39 @@
 import pygame
 import numpy as np
 
-# --- 1. CONFIGURATION STATIQUE ---
+pygame.init()
+
+TOOLBAR_HEIGHT = 60
 INIT_TILE_SIZE = 16.0
+
+# --- ÉTATS DE L'APPLICATION ---
+APP_STATE = "START_SCREEN"
+
+# Variables de l'état du jeu
+TILE_SIZE = INIT_TILE_SIZE
+camera_x = 0.0
+camera_y = 0.0
+is_panning = False
+last_mouse_pos = (0, 0)
+minimap_dragging = False
+minimap_drag_offset = (0, 0)
+
+# Variables de défilement de l'ui
+scroll_offset = 0
+BUTTON_GAP = 10
+BUTTON_BASE_WIDTH = 50
+BUTTON_HEIGHT = TOOLBAR_HEIGHT - BUTTON_GAP
+
+# Fonts
+font = pygame.font.Font(None, 32)
+title_font = pygame.font.Font(None, 48)
+label_font = pygame.font.SysFont("comicsans", 15)
+
+# --- 1. CONFIGURATION STATIQUE ---
 GRID_WIDTH = 100
 GRID_HEIGHT = 80
 
 SCROLL_BUTTON_WIDTH = 50
-
-clock = pygame.time.Clock()
 
 # Dimensions de la fenêtre par défaut
 DEFAULT_WINDOW_WIDTH = 1000
@@ -23,8 +48,8 @@ COLORS = {
     4: (120, 120, 120)  # Pierre
 }
 
+clock = pygame.time.Clock()
 # --- Toolbar ---
-TOOLBAR_HEIGHT = 60
 TOOLBAR_BUTTONS = [
     {"type": 0, "label": "Water"},
     {"type": 1, "label": "Grass"},

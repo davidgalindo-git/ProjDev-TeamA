@@ -14,6 +14,5 @@ def draw_start_screen():
     pass
 
 # World creation/management
-CURRENT_TERRAIN
 def draw_world():
     pass

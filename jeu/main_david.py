@@ -10,8 +10,6 @@ from ui.minimap.minimap import draw_minimap, handle_minimap_click, handle_minima
 from ui.timer.timer import timer, draw_timer, update_time_from_bar, update_day_from_bar, handle_day_bar_click
 from ui.toolbar.toolbar import handle_toolbar_click, draw_toolbar
 
-# --- 2. INITIALISATION PYGAME ET AFFICHAGE (NOUVEL ORDRE) ---
-
 # 1. Initialiser Pygame une seule fois
 pygame.init()
 pygame.display.set_caption("Créateur d'île - Pygame")
@@ -48,29 +46,6 @@ except pygame.error as e:
 
 
 
-# --- ÉTATS DE L'APPLICATION ---
-APP_STATE = "START_SCREEN"
-
-# Variables de l'état du jeu
-TILE_SIZE = G.INIT_TILE_SIZE
-camera_x = 0.0
-camera_y = 0.0
-is_panning = False
-last_mouse_pos = (0, 0)
-minimap_dragging = False
-minimap_drag_offset = (0, 0)
-
-# Variables de défilement de l'ui
-scroll_offset = 0
-BUTTON_GAP = 10
-BUTTON_BASE_WIDTH = 50
-BUTTON_HEIGHT = G.TOOLBAR_HEIGHT - BUTTON_GAP
-
-
-# Fonts
-font = pygame.font.Font(None, 32)
-title_font = pygame.font.Font(None, 48)
-label_font = pygame.font.SysFont("comicsans", 15)
 
 
 
@@ -245,7 +220,7 @@ START_BUTTONS = []
 def draw_start_screen(screen_width, screen_height):
     screen.fill((20, 20, 40))
 
-    title_surface = title_font.render("Créateur de Monde Sandbox", True, (255, 255, 255))
+    title_surface = G.title_font.render("Créateur de Monde Sandbox", True, (255, 255, 255))
     title_rect = title_surface.get_rect(center=(int(screen_width / 2), int(screen_height / 4)))
     screen.blit(title_surface, title_rect)
 
@@ -254,13 +229,13 @@ def draw_start_screen(screen_width, screen_height):
 
     btn1_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 - button_h - 10, button_w, button_h)
     pygame.draw.rect(screen, (50, 150, 50), btn1_rect, border_radius=10)
-    text1 = font.render("Créer de zéro (Eau)", True, (255, 255, 255))
+    text1 = G.font.render("Créer de zéro (Eau)", True, (255, 255, 255))
     text1_rect = text1.get_rect(center=btn1_rect.center)
     screen.blit(text1, text1_rect)
 
     btn2_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 + 10, button_w, button_h)
     pygame.draw.rect(screen, (150, 50, 50), btn2_rect, border_radius=10)
-    text2 = font.render("Monde aléatoire (Organique)", True, (255, 255, 255))
+    text2 = G.font.render("Monde aléatoire (Organique)", True, (255, 255, 255))
     text2_rect = text2.get_rect(center=btn2_rect.center)
     screen.blit(text2, text2_rect)
 
