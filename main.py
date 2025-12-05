@@ -287,8 +287,11 @@ def draw_time_bar():
     text_rect = text_surface.get_rect(center=TIME_BAR_RECT.center)
     screen.blit(text_surface, text_rect)
 
-def update_time_from_bar(mouse_x):
+def update_time_from_bar(mouse_pos):
     global world_hours, world_minutes
+
+    mouse_x = mouse_pos[0]  # extract X coordinate
+
     # Clamp x inside the bar
     x = max(TIME_BAR_RECT.x, min(mouse_x, TIME_BAR_RECT.x + TIME_BAR_RECT.width))
 
@@ -750,7 +753,7 @@ while running:
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
             if time_bar_dragging:
-                update_time_from_bar(event.pos[0])
+                update_time_from_bar(event.pos)
             if day_bar_dragging:
                 update_day_from_bar(event.pos)
 
