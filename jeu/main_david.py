@@ -432,17 +432,17 @@ while running:
             handle_day_bar_click(event.pos)
 
             # --- Priorité : clic sur la minimap ---
-            if APP_STATE == "GAME_SCREEN":
+            if G.APP_STATE == "GAME_SCREEN":
                 if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
                     # On empêche le reste du code de traiter ce clic
                     is_drawing = False
                     is_panning = False
                     continue
 
-            if APP_STATE == "START_SCREEN":
+            if G.APP_STATE == "START_SCREEN":
                 handle_start_screen_click(mouse_pos)
 
-            elif APP_STATE == "GAME_SCREEN":
+            elif G.APP_STATE == "GAME_SCREEN":
                 if event.button == 1:  # Clic Gauche (Dessin/ui)
                     if handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
                         is_drawing = False
@@ -477,25 +477,25 @@ while running:
                 update_day_from_bar(event.pos)
 
             # Priorité : si on est en train de drag la minimap → ignorer le reste
-            if APP_STATE == "GAME_SCREEN" and minimap_dragging:
+            if G.APP_STATE == "GAME_SCREEN" and minimap_dragging:
                 handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
                 continue
 
             # Panning clic droit
-            if APP_STATE == "GAME_SCREEN" and is_panning:
+            if G.APP_STATE == "GAME_SCREEN" and is_panning:
                 dx = mouse_pos[0] - last_mouse_pos[0]
                 dy = mouse_pos[1] - last_mouse_pos[1]
-                camera_x -= dx
-                camera_y -= dy
+                G.camera_x -= dx
+                G.camera_y -= dy
                 last_mouse_pos = mouse_pos
 
     # --- LOGIQUE D'AFFICHAGE ---
-    screen.fill((0, 0, 0))
+    G.screen.fill((0, 0, 0))
 
-    if APP_STATE == "START_SCREEN":
+    if G.APP_STATE == "START_SCREEN":
         draw_start_screen(screen_width, screen_height)
 
-    elif APP_STATE == "GAME_SCREEN":
+    elif G.APP_STATE == "GAME_SCREEN":
         # 1. Dessiner le monde (maintenant avec des images) et démarrer timer
         draw_world(screen_width, grid_bottom_y)
 
@@ -503,15 +503,15 @@ while running:
         if is_drawing:
             mouse_x, mouse_y = pygame.mouse.get_pos()
             if mouse_y < grid_bottom_y:
-                world_x = mouse_x + camera_x
-                world_y = mouse_y + camera_y
+                world_x = mouse_x + G.camera_x
+                world_y = mouse_y + G.camera_y
 
                 grid_col = int(world_x // TILE_SIZE)
                 grid_row = int(world_y // TILE_SIZE)
 
                 if 0 <= grid_col < G.GRID_WIDTH and 0 <= grid_row < G.GRID_HEIGHT:
                     # compute offsets so that we paint an exact CURRENT_BRUSH x CURRENT_BRUSH square
-                    N = int(CURRENT_BRUSH)
+                    N = int(G.CURRENT_BRUSH)
                     start_offset = -(N // 2)
                     # For even sizes this centers slightly up-left which is expected; you can change anchor if you want top-left.
                     for dr in range(start_offset, start_offset + N):
@@ -519,7 +519,7 @@ while running:
                             r = grid_row + dr
                             c = grid_col + dc
                             if 0 <= r < G.GRID_HEIGHT and 0 <= c < G.GRID_WIDTH:
-                                world_grid[r][c] = CURRENT_TERRAIN
+                                G.world_grid[r][c] = G.CURRENT_TERRAIN
         if timer_active:
             world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
 

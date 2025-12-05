@@ -136,7 +136,7 @@ while running:
                             r = grid_row + dr
                             c = grid_col + dc
                             if 0 <= r < G.GRID_HEIGHT and 0 <= c < G.GRID_WIDTH:
-                                world_grid[r][c] = G.CURRENT_TERRAIN
+                                G.world_grid[r][c] = G.CURRENT_TERRAIN
         if timer_active:
             world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
 
