@@ -1,48 +1,55 @@
+import pygame
+import math
+
 from jeu.main_david_old import *
+import jeu.globals as G
+
 def draw_minimap(screen_width, grid_bottom_y):
-    """Dessine la minimap en haut à droite et le rectangle de la vue."""
     MAP_W = 200
     MAP_H = 160
     MARGIN = 10
 
-    # Position en haut à droite
     minimap_x = screen_width - MAP_W - MARGIN
     minimap_y = MARGIN
 
-    # fond + bord
-    pygame.draw.rect(screen, (30, 30, 30), (minimap_x - 2, minimap_y - 2, MAP_W + 4, MAP_H + 4), border_radius=4)
-    pygame.draw.rect(screen, (0, 0, 0), (minimap_x, minimap_y, MAP_W, MAP_H))
+    pygame.draw.rect(G.screen, (30, 30, 30),
+                     (minimap_x - 2, minimap_y - 2, MAP_W + 4, MAP_H + 4),
+                     border_radius=4)
+    pygame.draw.rect(G.screen, (0, 0, 0),
+                     (minimap_x, minimap_y, MAP_W, MAP_H))
 
-    cell_w = MAP_W / GRID_WIDTH
-    cell_h = MAP_H / GRID_HEIGHT
+    cell_w = MAP_W / G.GRID_WIDTH
+    cell_h = MAP_H / G.GRID_HEIGHT
 
-    # dessiner la grille réduite
-    for r in range(GRID_HEIGHT):
-        for c in range(GRID_WIDTH):
-            terrain_type = world_grid[r][c]
-            color = COLORS.get(terrain_type, (255, 0, 255))
+    # grille réduite
+    for r in range(G.GRID_HEIGHT):
+        for c in range(G.GRID_WIDTH):
+            terrain = G.world_grid[r][c]
+            color = G.COLORS.get(terrain, (255, 0, 255))
             px = int(minimap_x + c * cell_w)
             py = int(minimap_y + r * cell_h)
-            # dessine un petit rectangle (au moins 1px)
-            screen.fill(color, (px, py, max(1, int(math.ceil(cell_w))), max(1, int(math.ceil(cell_h)))))
+            G.screen.fill(
+                color,
+                (
+                    px, py,
+                    max(1, int(math.ceil(cell_w))),
+                    max(1, int(math.ceil(cell_h)))
+                )
+            )
 
-    # rectangle de la zone visible (en tuiles)
-    # largeur de la vue en tuiles = screen_width / TILE_SIZE
-    view_cols = screen_width / TILE_SIZE
-    view_rows = (grid_bottom_y) / TILE_SIZE
+    # rectangle de vue
+    view_cols = screen_width / G.TILE_SIZE
+    view_rows = grid_bottom_y / G.TILE_SIZE
 
     view_w = view_cols * cell_w
     view_h = view_rows * cell_h
-    view_x = minimap_x + (camera_x / TILE_SIZE) * cell_w
-    view_y = minimap_y + (camera_y / TILE_SIZE) * cell_h
+    view_x = minimap_x + (G.camera_x / G.TILE_SIZE) * cell_w
+    view_y = minimap_y + (G.camera_y / G.TILE_SIZE) * cell_h
 
-    # tracer le rectangle (avec clamp pour garder l'affichage propre)
-    pygame.draw.rect(screen, (255, 0, 0), (view_x, view_y, view_w, view_h), width=2)
-
+    pygame.draw.rect(G.screen, (255, 0, 0),
+                     (view_x, view_y, view_w, view_h), width=2)
 
 def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
-    global camera_x, camera_y, minimap_dragging, minimap_drag_offset
-
     MAP_W = 200
     MAP_H = 160
     MARGIN = 10
@@ -55,47 +62,47 @@ def handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
     if not (mini_x <= mx <= mini_x + MAP_W and mini_y <= my <= mini_y + MAP_H):
         return False
 
-    # coordonnées relatives
     rel_x = (mx - mini_x) / MAP_W
     rel_y = (my - mini_y) / MAP_H
 
-    # calcul du rectangle de vue pour déterminer si on clique dedans (début drag)
-    view_cols = screen_width / TILE_SIZE
-    view_rows = grid_bottom_y / TILE_SIZE
-    cell_w = MAP_W / GRID_WIDTH
-    cell_h = MAP_H / GRID_HEIGHT
+    # vue
+    view_cols = screen_width / G.TILE_SIZE
+    view_rows = grid_bottom_y / G.TILE_SIZE
+
+    cell_w = MAP_W / G.GRID_WIDTH
+    cell_h = MAP_H / G.GRID_HEIGHT
 
     view_w = view_cols * cell_w
     view_h = view_rows * cell_h
-    view_x = mini_x + (camera_x / TILE_SIZE) * cell_w
-    view_y = mini_y + (camera_y / TILE_SIZE) * cell_h
 
-    # si clic dans le rectangle rouge → start drag
+    view_x = mini_x + (G.camera_x / G.TILE_SIZE) * cell_w
+    view_y = mini_y + (G.camera_y / G.TILE_SIZE) * cell_h
+
+    # drag dans rectangle rouge
     if view_x <= mx <= view_x + view_w and view_y <= my <= view_y + view_h:
-        minimap_dragging = True
-        minimap_drag_offset = (mx - view_x, my - view_y)
+        G.minimap_dragging = True
+        G.minimap_drag_offset = (mx - view_x, my - view_y)
         return True
 
-    # sinon → clic normal (téléportation instantanée)
-    target_col = int(rel_x * GRID_WIDTH)
-    target_row = int(rel_y * GRID_HEIGHT)
+    # clic simple = téléportation
+    target_col = int(rel_x * G.GRID_WIDTH)
+    target_row = int(rel_y * G.GRID_HEIGHT)
 
-    scr_w, scr_h = screen.get_size()
-    new_cam_x = (target_col + 0.5) * TILE_SIZE - scr_w / 2
-    new_cam_y = (target_row + 0.5) * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT) / 2
+    scr_w, scr_h = G.screen.get_size()
 
-    max_camera_x = max(0, GRID_WIDTH * TILE_SIZE - scr_w)
-    max_camera_y = max(0, GRID_HEIGHT * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT))
+    new_cam_x = (target_col + 0.5) * G.TILE_SIZE - scr_w / 2
+    new_cam_y = (target_row + 0.5) * G.TILE_SIZE - (scr_h - G.TOOLBAR_HEIGHT) / 2
 
-    camera_x = max(0, min(new_cam_x, max_camera_x))
-    camera_y = max(0, min(new_cam_y, max_camera_y))
+    max_camera_x = max(0, G.GRID_WIDTH * G.TILE_SIZE - scr_w)
+    max_camera_y = max(0, G.GRID_HEIGHT * G.TILE_SIZE - (scr_h - G.TOOLBAR_HEIGHT))
+
+    G.camera_x = max(0, min(new_cam_x, max_camera_x))
+    G.camera_y = max(0, min(new_cam_y, max_camera_y))
 
     return True
 
 def handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y):
-    global camera_x, camera_y, minimap_dragging
-
-    if not minimap_dragging:
+    if not G.minimap_dragging:
         return
 
     MAP_W = 200
@@ -107,24 +114,22 @@ def handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y):
 
     mx, my = mouse_pos
 
-    cell_w = MAP_W / GRID_WIDTH
-    cell_h = MAP_H / GRID_HEIGHT
+    cell_w = MAP_W / G.GRID_WIDTH
+    cell_h = MAP_H / G.GRID_HEIGHT
 
-    # position de la nouvelle tuile ciblée
-    view_x = mx - minimap_drag_offset[0]
-    view_y = my - minimap_drag_offset[1]
+    view_x = mx - G.minimap_drag_offset[0]
+    view_y = my - G.minimap_drag_offset[1]
 
-    # conversion en tuiles
     tile_col = (view_x - mini_x) / cell_w
     tile_row = (view_y - mini_y) / cell_h
 
-    scr_w, scr_h = screen.get_size()
-    new_cam_x = tile_col * TILE_SIZE
-    new_cam_y = tile_row * TILE_SIZE
+    scr_w, scr_h = G.screen.get_size()
 
-    # clamp
-    max_camera_x = max(0, GRID_WIDTH * TILE_SIZE - scr_w)
-    max_camera_y = max(0, GRID_HEIGHT * TILE_SIZE - (scr_h - TOOLBAR_HEIGHT))
+    new_cam_x = tile_col * G.TILE_SIZE
+    new_cam_y = tile_row * G.TILE_SIZE
 
-    camera_x = max(0, min(new_cam_x, max_camera_x))
-    camera_y = max(0, min(new_cam_y, max_camera_y))
+    max_camera_x = max(0, G.GRID_WIDTH * G.TILE_SIZE - scr_w)
+    max_camera_y = max(0, G.GRID_HEIGHT * G.TILE_SIZE - (scr_h - G.TOOLBAR_HEIGHT))
+
+    G.camera_x = max(0, min(new_cam_x, max_camera_x))
+    G.camera_y = max(0, min(new_cam_y, max_camera_y))
