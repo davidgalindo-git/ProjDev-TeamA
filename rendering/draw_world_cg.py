@@ -1,7 +1,8 @@
 # Dessin du monde
 
 import pygame
-from config_cg import *
+
+from jeu.main_Mouldi import *
 
 def draw_world(screen, world, assets):
     tile = world.tile_size

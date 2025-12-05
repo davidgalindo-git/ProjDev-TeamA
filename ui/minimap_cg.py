@@ -1,6 +1,7 @@
 import pygame
 import math
 
+
 def draw_minimap(screen, world_grid, camera_x, camera_y, screen_width, grid_bottom_y, TILE_SIZE, COLORS):
     """Dessine la minimap en haut à droite et le rectangle de la vue."""
     GRID_HEIGHT = len(world_grid)
