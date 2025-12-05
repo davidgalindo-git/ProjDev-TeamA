@@ -1,4 +1,19 @@
 from jeu.main_david_old import *
+
+MAX_DAYS = 1000
+world_minutes = 0
+world_hours = 0
+world_days = 0
+display_hours = 0
+# 1 real second = 1 game hour
+GAME_HOURS_PER_SECOND = 1
+# buttons
+timer_button = pygame.Rect(20, 20, 120, 40)
+# Time bar
+TIME_BAR_RECT = pygame.Rect(150, 60, 400, 20)  # x, y, width, height
+# Day bar
+DAY_BAR_RECT = pygame.Rect(150, 20, 400, 20)  # x, y, width, height
+
 def timer(world_hours, world_days):
     # --- Update world time ---
     delta_real_seconds = clock.get_time() / 1000  # convert ms to seconds

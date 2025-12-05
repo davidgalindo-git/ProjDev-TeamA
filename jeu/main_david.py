@@ -3,53 +3,11 @@ import sys
 import random
 import math
 import numpy as np
+import globals as G
 from opensimplex import OpenSimplex
 from assets import *
-from ui.minimap.minimap import draw_minimap
-
-# --- 1. CONFIGURATION STATIQUE ---
-INIT_TILE_SIZE = 16.0
-GRID_WIDTH = 100
-GRID_HEIGHT = 80
-
-TOOLBAR_HEIGHT = 60
-SCROLL_BUTTON_WIDTH = 50
-
-# Dimensions de la fenêtre par défaut
-DEFAULT_WINDOW_WIDTH = 1000
-DEFAULT_WINDOW_HEIGHT = 700
-
-# Couleurs pour les types de terrain (MAINTENU UNIQUEMENT POUR L'AFFICHAGE DE L'ui)
-COLORS = {
-    0: (0, 0, 200),  # Eau
-    1: (0, 150, 0),  # Herbe
-    2: (150, 75, 0),  # Montagne
-    3: (240, 230, 140),  # Sable
-    4: (120, 120, 120)  # Pierre
-}
-
-# --- Brush Sizes ---
-BRUSH_SIZES = [1, 4, 16, 64]
-CURRENT_BRUSH = 1  # default 1x1
-
-TERRAIN_IMAGES_RAW = {}
-TERRAIN_IMAGES = {}
-
-# --- World Time Simulation ---
-timer_active = False
-MAX_DAYS = 1000
-world_minutes = 0
-world_hours = 0
-world_days = 0
-display_hours = 0
-# 1 real second = 1 game hour
-GAME_HOURS_PER_SECOND = 1
-# buttons
-timer_button = pygame.Rect(20, 20, 120, 40)
-# Time bar
-TIME_BAR_RECT = pygame.Rect(150, 60, 400, 20)  # x, y, width, height
-# Day bar
-DAY_BAR_RECT = pygame.Rect(150, 20, 400, 20)  # x, y, width, height
+from ui.minimap.minimap import draw_minimap, handle_minimap_click, handle_minimap_drag
+from ui.timer.timer import timer, draw_timer, update_time_from_bar, update_day_from_bar, handle_day_bar_click
 
 # --- 2. INITIALISATION PYGAME ET AFFICHAGE (NOUVEL ORDRE) ---
 
@@ -62,11 +20,11 @@ FULLSCREEN_MODE = pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
 current_screen_flags = 0
 
 # C'est cette ligne qui définit le mode vidéo et permet le convert_alpha()
-screen = pygame.display.set_mode((DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT), current_screen_flags)
+screen = pygame.display.set_mode((G.DEFAULT_WINDOW_WIDTH, G.DEFAULT_WINDOW_HEIGHT), current_screen_flags)
 
 # 3. Charger les images (Maintenant que le mode vidéo est défini)
 try:
-    # J'ai rétabli l'usage des COLORS pour la barre d'outils, car TERRAIN_IMAGES_RAW contient des surfaces.
+    # J'ai rétabli l'usage des G.COLORS pour la barre d'outils, car TERRAIN_IMAGES_RAW contient des surfaces.
     # L'erreur de draw_toolbar qui attend une couleur sera corrigée plus bas.
     TERRAIN_IMAGES_RAW = {
         0: pygame.image.load("../assets/water.png").convert_alpha(),
@@ -75,8 +33,8 @@ try:
         3: pygame.image.load("../assets/sand.png").convert_alpha(),
         4: pygame.image.load("../assets/stone.png").convert_alpha(),
     }
-    # J'ai retiré les types 4 (stone/dirt) car ils n'étaient pas définis dans le COLORS ni dans TOOLBAR_BUTTONS.
-    # Si vous voulez les utiliser, vous devez mettre à jour COLORS et TOOLBAR_BUTTONS.
+    # J'ai retiré les types 4 (stone/dirt) car ils n'étaient pas définis dans le G.COLORS ni dans TOOLBAR_BUTTONS.
+    # Si vous voulez les utiliser, vous devez mettre à jour G.COLORS et TOOLBAR_BUTTONS.
 except pygame.error as e:
     print(
         f"Erreur de chargement d'image : Vérifiez l'existence des fichiers dans 'assets/'. Erreur: {e}")
@@ -107,7 +65,7 @@ CURRENT_TERRAIN = TOOLBAR_BUTTONS[0]["type"]
 APP_STATE = "START_SCREEN"
 
 # Variables de l'état du jeu
-TILE_SIZE = INIT_TILE_SIZE
+TILE_SIZE = G.G.INIT_TILE_SIZE
 camera_x = 0.0
 camera_y = 0.0
 is_panning = False
@@ -119,10 +77,10 @@ minimap_drag_offset = (0, 0)
 scroll_offset = 0
 BUTTON_GAP = 10
 BUTTON_BASE_WIDTH = 50
-BUTTON_HEIGHT = TOOLBAR_HEIGHT - BUTTON_GAP
+BUTTON_HEIGHT = G.TOOLBAR_HEIGHT - BUTTON_GAP
 
 # Créer la grille (carte)
-world_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
+world_grid = np.zeros((G.GRID_HEIGHT, G.GRID_WIDTH), dtype=int)
 
 # Fonts
 font = pygame.font.Font(None, 32)
@@ -136,7 +94,7 @@ clock = pygame.time.Clock()
 
 def get_dimensions():
     scr_w, scr_h = screen.get_size()
-    grid_bottom_y = scr_h - TOOLBAR_HEIGHT
+    grid_bottom_y = scr_h - G.TOOLBAR_HEIGHT
     return float(scr_w), float(scr_h), float(grid_bottom_y)
 
 
@@ -146,7 +104,7 @@ def toggle_fullscreen():
 
     if current_screen_flags & pygame.FULLSCREEN:
         current_screen_flags &= ~pygame.FULLSCREEN
-        screen = pygame.display.set_mode((DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT), current_screen_flags)
+        screen = pygame.display.set_mode((G.DEFAULT_WINDOW_WIDTH, G.DEFAULT_WINDOW_HEIGHT), current_screen_flags)
     else:
         current_screen_flags |= FULLSCREEN_MODE
         screen_info = pygame.display.Info()
@@ -158,7 +116,7 @@ def generate_random_world():
     global world_grid, TILE_SIZE, camera_x, camera_y
 
     # Réinitialisation de la caméra et du zoom
-    TILE_SIZE = INIT_TILE_SIZE
+    TILE_SIZE = G.INIT_TILE_SIZE
     camera_x = 0.0
     camera_y = 0.0
 
@@ -171,21 +129,21 @@ def generate_random_world():
     OFFSET_X = random.uniform(0.0, 1000.0)
     OFFSET_Y = random.uniform(0.0, 1000.0)
 
-    CENTER_X = GRID_WIDTH / 2.0
-    CENTER_Y = GRID_HEIGHT / 2.0
+    CENTER_X = G.GRID_WIDTH / 2.0
+    CENTER_Y = G.GRID_HEIGHT / 2.0
 
     # Le rayon peut être plus grand ou plus petit pour créer des continents ou des archipels
-    MAX_RADIUS = random.uniform(GRID_WIDTH / 3.0, GRID_WIDTH / 2.0)
+    MAX_RADIUS = random.uniform(G.GRID_WIDTH / 3.0, G.GRID_WIDTH / 2.0)
 
     # Seuils aléatoires pour plus de variété
     MOUNTAIN_THRESHOLD = random.uniform(0.65, 0.85)
     LAND_THRESHOLD = random.uniform(0.3, 0.4)
 
     # 1. GÉNÉRATION DE LA CARTE DE HAUTEUR
-    height_map = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=float)
+    height_map = np.zeros((G.GRID_HEIGHT, G.GRID_WIDTH), dtype=float)
 
-    for r in range(GRID_HEIGHT):
-        for c in range(GRID_WIDTH):
+    for r in range(G.GRID_HEIGHT):
+        for c in range(G.GRID_WIDTH):
             # 1a. Bruit de Hauteur (Détermine si c'est de l'eau, terre ou montagne)
             noise_val_h = simplex_height.noise2(x=(c + OFFSET_X) / SCALE_HEIGHT, y=(r + OFFSET_Y) / SCALE_HEIGHT)
             normalized_noise_h = (noise_val_h + 1.0) / 2.0
@@ -198,7 +156,7 @@ def generate_random_world():
             height_map[r, c] = final_height
 
     # 2. APPLICATION DES SEUILS ET CRÉATION DE LA GRILLE
-    new_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
+    new_grid = np.zeros((G.GRID_HEIGHT, G.GRID_WIDTH), dtype=int)
 
     # Remplissage par défaut : Herbe (Type 1) pour les terres moyennes
     new_grid[(height_map > LAND_THRESHOLD)] = 1
@@ -211,8 +169,8 @@ def generate_random_world():
     # 3. POST-PROCESSUS: CRÉATION DES PLAGES DE SABLE
     final_grid = new_grid.copy()
 
-    for r in range(GRID_HEIGHT):
-        for c in range(GRID_WIDTH):
+    for r in range(G.GRID_HEIGHT):
+        for c in range(G.GRID_WIDTH):
             if final_grid[r, c] == 1 or final_grid[r, c] == 2:  # Si c'est Herbe ou Montagne/Terre
                 is_coastal = False
 
@@ -223,7 +181,7 @@ def generate_random_world():
 
                         nr, nc = r + dr, c + dc
 
-                        if 0 <= nr < GRID_HEIGHT and 0 <= nc < GRID_WIDTH:
+                        if 0 <= nr < G.GRID_HEIGHT and 0 <= nc < G.GRID_WIDTH:
                             if new_grid[nr, nc] == 0:
                                 is_coastal = True
                                 break
@@ -237,117 +195,6 @@ def generate_random_world():
 
 
 # --- 4. FONCTIONS ui ET AFFICHAGE ---
-def timer(world_hours, world_days):
-    # --- Update world time ---
-    delta_real_seconds = clock.get_time() / 1000  # convert ms to seconds
-
-    # Add hours according to your rule
-    world_hours += delta_real_seconds * GAME_HOURS_PER_SECOND
-
-    # Handle overflow
-    while world_hours >= 24:
-        world_hours -= 24
-        world_days += 1
-
-    world_minutes = int((world_hours % 1) * 60)
-    display_hours = int(world_hours)
-
-    return world_hours, world_days, display_hours, world_minutes
-
-def draw_timer(days):
-    global display_hours, world_minutes, timer_active
-    draw_time_bar()
-    draw_day_bar()
-
-    # --- TIMER CONTROL BUTTON (toggle) ---
-    btn_color = (200, 50, 50) if timer_active else (50, 200, 50)
-    pygame.draw.rect(screen, btn_color, timer_button)
-    button_text = "STOP" if timer_active else "PLAY"
-    text_surf = font.render(button_text, True, (255, 255, 255))
-    screen.blit(text_surf, (timer_button.x + 10, timer_button.y + 10))
-
-def draw_time_bar():
-    """Draw the timeline bar showing current world time with hours:minutes centered."""
-    global world_hours, world_minutes
-
-    # Background of the bar
-    pygame.draw.rect(screen, (100, 100, 100), TIME_BAR_RECT, border_radius=5)
-
-    # Fill portion of the bar (progress of the day)
-    day_progress = world_hours / 24.0
-    fill_width = int(TIME_BAR_RECT.width * day_progress)
-    pygame.draw.rect(screen, (50, 200, 50), (TIME_BAR_RECT.x, TIME_BAR_RECT.y, fill_width, TIME_BAR_RECT.height), border_radius=5)
-
-    # Handle (small red rectangle)
-    handle_x = TIME_BAR_RECT.x + fill_width
-    pygame.draw.rect(screen, (255, 0, 0), (handle_x - 3, TIME_BAR_RECT.y - 2, 6, TIME_BAR_RECT.height + 4))
-
-    # Draw the time in the middle of the bar
-    time_text = f"{int(world_hours):02d}:{int(world_minutes):02d}"
-    text_surface = font.render(time_text, True, (255, 255, 255))
-    text_rect = text_surface.get_rect(center=TIME_BAR_RECT.center)
-    screen.blit(text_surface, text_rect)
-
-def update_time_from_bar(mouse_pos):
-    global world_hours, world_minutes
-
-    mouse_x = mouse_pos[0]  # extract X coordinate
-
-    # Clamp x inside the bar
-    x = max(TIME_BAR_RECT.x, min(mouse_x, TIME_BAR_RECT.x + TIME_BAR_RECT.width))
-
-    # Fraction of the bar
-    fraction = (x - TIME_BAR_RECT.x) / TIME_BAR_RECT.width
-
-    # Set world_hours as float (fractional)
-    world_hours = fraction * 24.0
-    world_minutes = int((world_hours % 1) * 60)
-
-def draw_day_bar():
-    global world_days
-
-    # Draw background bar
-    pygame.draw.rect(screen, (100, 100, 100), DAY_BAR_RECT, border_radius=5)
-
-    # Compute fill width from world_days
-    fraction = world_days / MAX_DAYS
-    fill_width = int(DAY_BAR_RECT.width * fraction)
-
-    # Fill bar
-    pygame.draw.rect(screen, (50, 200, 50), (DAY_BAR_RECT.x, DAY_BAR_RECT.y, fill_width, DAY_BAR_RECT.height), border_radius=5)
-
-    # Draw handle
-    handle_x = DAY_BAR_RECT.x + fill_width
-    pygame.draw.rect(screen, (255, 0, 0), (handle_x - 3, DAY_BAR_RECT.y - 2, 6, DAY_BAR_RECT.height + 4))
-
-    # Affichage du nombre de jours
-    day_text = f"Day {world_days}"
-    text_surface = font.render(day_text, True, (255,255,255))
-    text_rect = text_surface.get_rect(center=DAY_BAR_RECT.center)
-    screen.blit(text_surface, text_rect)
-
-
-def update_day_from_bar(mouse_pos):
-    global world_days
-
-    mouse_x = mouse_pos[0]  # extract X coordinate
-
-    # Clamp X inside the bar
-    x = max(DAY_BAR_RECT.x, min(mouse_x, DAY_BAR_RECT.x + DAY_BAR_RECT.width))
-
-    # Fraction along the bar (0 to 1)
-    fraction = (x - DAY_BAR_RECT.x) / DAY_BAR_RECT.width
-
-    # Set world_days according to fraction of max
-    world_days = int(fraction * MAX_DAYS)
-
-def handle_day_bar_click(mouse_pos):
-    global day_bar_dragging
-    if DAY_BAR_RECT.collidepoint(mouse_pos):
-        day_bar_dragging = True
-        update_day_from_bar(mouse_pos)
-        return True
-    return False
 
 
 def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
@@ -357,23 +204,23 @@ def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
     if mouse_pos[1] > grid_bottom_y:
 
         # 1. Gérer les flèches de défilement
-        left_arrow_rect = pygame.Rect(0, grid_bottom_y, SCROLL_BUTTON_WIDTH, TOOLBAR_HEIGHT)
+        left_arrow_rect = pygame.Rect(0, grid_bottom_y, G.SCROLL_BUTTON_WIDTH, G.TOOLBAR_HEIGHT)
         if left_arrow_rect.collidepoint(mouse_pos):
             scroll_offset = max(0, scroll_offset - (BUTTON_BASE_WIDTH + BUTTON_GAP))
             return True
 
-        right_arrow_rect = pygame.Rect(screen_width - SCROLL_BUTTON_WIDTH, grid_bottom_y, SCROLL_BUTTON_WIDTH,
-                                       TOOLBAR_HEIGHT)
+        right_arrow_rect = pygame.Rect(screen_width - G.SCROLL_BUTTON_WIDTH, grid_bottom_y, G.SCROLL_BUTTON_WIDTH,
+                                       G.TOOLBAR_HEIGHT)
         if right_arrow_rect.collidepoint(mouse_pos):
             total_button_width = (BUTTON_BASE_WIDTH + BUTTON_GAP) * len(TOOLBAR_BUTTONS)
-            available_width = screen_width - 2 * SCROLL_BUTTON_WIDTH - BUTTON_GAP
+            available_width = screen_width - 2 * G.SCROLL_BUTTON_WIDTH - BUTTON_GAP
             max_offset = max(0, total_button_width - available_width)
 
             scroll_offset = min(max_offset, scroll_offset + (BUTTON_BASE_WIDTH + BUTTON_GAP))
             return True
 
         # 2. Gérer les boutons d'outils
-        button_area_left = SCROLL_BUTTON_WIDTH
+        button_area_left = G.SCROLL_BUTTON_WIDTH
         corrected_x = mouse_pos[0] + scroll_offset - button_area_left
         btn_index = int(corrected_x // (BUTTON_BASE_WIDTH + BUTTON_GAP))
 
@@ -396,25 +243,25 @@ def handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
 
 def draw_toolbar(screen_width, grid_bottom_y):
     """Dessine la barre d'outils et les boutons de brush."""
-    toolbar_rect = pygame.Rect(0, grid_bottom_y, screen_width, TOOLBAR_HEIGHT)
+    toolbar_rect = pygame.Rect(0, grid_bottom_y, screen_width, G.TOOLBAR_HEIGHT)
     pygame.draw.rect(screen, (50, 50, 50), toolbar_rect)
 
     # --- Dessiner les Boutons de l'Outil ---
-    button_area_rect = pygame.Rect(SCROLL_BUTTON_WIDTH, grid_bottom_y, screen_width - 2 * SCROLL_BUTTON_WIDTH,
-                                   TOOLBAR_HEIGHT)
+    button_area_rect = pygame.Rect(G.SCROLL_BUTTON_WIDTH, grid_bottom_y, screen_width - 2 * G.SCROLL_BUTTON_WIDTH,
+                                   G.TOOLBAR_HEIGHT)
     screen.set_clip(button_area_rect)
 
     button_y = grid_bottom_y + BUTTON_GAP / 2
 
     for i, btn in enumerate(TOOLBAR_BUTTONS):
-        btn_x_absolute = SCROLL_BUTTON_WIDTH + (i * (BUTTON_BASE_WIDTH + BUTTON_GAP)) - scroll_offset
+        btn_x_absolute = G.SCROLL_BUTTON_WIDTH + (i * (BUTTON_BASE_WIDTH + BUTTON_GAP)) - scroll_offset
         btn_rect = pygame.Rect(btn_x_absolute, button_y, BUTTON_BASE_WIDTH, BUTTON_HEIGHT)
 
-        # choose base color: for terrain use COLORS, for brush use a neutral gray
+        # choose base color: for terrain use G.COLORS, for brush use a neutral gray
         if "brush" in btn:
             btn_color = (80, 80, 120)
         else:
-            btn_color = COLORS.get(btn["type"], (50, 50, 50))
+            btn_color = G.COLORS.get(btn["type"], (50, 50, 50))
 
         # Highlight if selected
         is_selected = False
@@ -464,14 +311,14 @@ def draw_world(screen_width, grid_bottom_y):
     global TILE_SIZE
 
     # Correction du Dézoom / Bande Noire (INCHANGÉ)
-    min_tile_size_x = screen_width / GRID_WIDTH
-    min_tile_size_y = grid_bottom_y / GRID_HEIGHT
+    min_tile_size_x = screen_width / G.GRID_WIDTH
+    min_tile_size_y = grid_bottom_y / G.GRID_HEIGHT
 
     TILE_SIZE = max(TILE_SIZE, min(min_tile_size_x, min_tile_size_y))
 
     # Correction de la position de la Caméra (INCHANGÉ)
-    max_camera_x = max(0.0, GRID_WIDTH * TILE_SIZE - screen_width)
-    max_camera_y = max(0.0, GRID_HEIGHT * TILE_SIZE - grid_bottom_y)
+    max_camera_x = max(0.0, G.GRID_WIDTH * TILE_SIZE - screen_width)
+    max_camera_y = max(0.0, G.GRID_HEIGHT * TILE_SIZE - grid_bottom_y)
 
     camera_x = max(0.0, min(camera_x, max_camera_x))
     camera_y = max(0.0, min(camera_y, max_camera_y))
@@ -481,9 +328,9 @@ def draw_world(screen_width, grid_bottom_y):
 
     # Dessin des tuiles visibles
     start_col = max(0, int(camera_x // TILE_SIZE))
-    end_col = min(GRID_WIDTH, int((camera_x + screen_width) // TILE_SIZE + 1))
+    end_col = min(G.GRID_WIDTH, int((camera_x + screen_width) // TILE_SIZE + 1))
     start_row = max(0, int(camera_y // TILE_SIZE))
-    end_row = min(GRID_HEIGHT, int((camera_y + grid_bottom_y) // TILE_SIZE + 1))
+    end_row = min(G.GRID_HEIGHT, int((camera_y + grid_bottom_y) // TILE_SIZE + 1))
 
     for row in range(start_row, end_row):
         for col in range(start_col, end_col):
@@ -540,7 +387,7 @@ def handle_start_screen_click(mouse_pos):
     for btn in START_BUTTONS:
         if btn["rect"].collidepoint(mouse_pos):
             if btn["action"] == "NEW":
-                world_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int).tolist()
+                world_grid = np.zeros((G.GRID_HEIGHT, G.GRID_WIDTH), dtype=int).tolist()
                 APP_STATE = "GAME_SCREEN"
 
             elif btn["action"] == "RANDOM":
@@ -572,14 +419,14 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
 
-            if timer_button.collidepoint(event.pos):
+            if G.timer_button.collidepoint(event.pos):
                 timer_active = not timer_active # toggle
 
-            if TIME_BAR_RECT.collidepoint(event.pos):
+            if G.TIME_BAR_RECT.collidepoint(event.pos):
                 time_bar_dragging = True
                 timer_active = False  # pause time while scrubbing
                 # immediately set time based on click
-                rel_x = (event.pos[0] - TIME_BAR_RECT.x) / TIME_BAR_RECT.width
+                rel_x = (event.pos[0] - G.TIME_BAR_RECT.x) / G.TIME_BAR_RECT.width
                 world_hours = rel_x * 24
 
             handle_day_bar_click(event.pos)
@@ -662,7 +509,7 @@ while running:
                 grid_col = int(world_x // TILE_SIZE)
                 grid_row = int(world_y // TILE_SIZE)
 
-                if 0 <= grid_col < GRID_WIDTH and 0 <= grid_row < GRID_HEIGHT:
+                if 0 <= grid_col < G.GRID_WIDTH and 0 <= grid_row < G.GRID_HEIGHT:
                     # compute offsets so that we paint an exact CURRENT_BRUSH x CURRENT_BRUSH square
                     N = int(CURRENT_BRUSH)
                     start_offset = -(N // 2)
@@ -671,7 +518,7 @@ while running:
                         for dc in range(start_offset, start_offset + N):
                             r = grid_row + dr
                             c = grid_col + dc
-                            if 0 <= r < GRID_HEIGHT and 0 <= c < GRID_WIDTH:
+                            if 0 <= r < G.GRID_HEIGHT and 0 <= c < G.GRID_WIDTH:
                                 world_grid[r][c] = CURRENT_TERRAIN
         if timer_active:
             world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
