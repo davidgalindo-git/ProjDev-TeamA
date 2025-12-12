@@ -3,20 +3,38 @@ import numpy as np
 
 pygame.init()
 
-TOOLBAR_HEIGHT = 60
-INIT_TILE_SIZE = 16.0
 
 # Flags
+current_screen_flags = 0
 running = True
 is_drawing = False
 time_bar_dragging = False
 day_bar_dragging = False
 minimap_dragging = False
+timer_active = False
+
+# --- 1. CONFIGURATION STATIQUE ---
+GRID_WIDTH = 100
+GRID_HEIGHT = 80
+
+SCROLL_BUTTON_WIDTH = 50
+
+# Dimensions de la fenêtre par défaut
+DEFAULT_WINDOW_WIDTH = 1000
+DEFAULT_WINDOW_HEIGHT = 700
+
+FULLSCREEN_MODE = pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
+
+screen = pygame.display.set_mode((DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT), current_screen_flags)
+screen_width = 0.0
+screen_height = 0.0
+grid_bottom_y = 0.0
 
 # --- ÉTATS DE L'APPLICATION ---
 APP_STATE = "START_SCREEN"
 
 # Variables de l'état du jeu
+INIT_TILE_SIZE = 16.0
 TILE_SIZE = INIT_TILE_SIZE
 camera_x = 0.0
 camera_y = 0.0
@@ -31,6 +49,7 @@ min_tile_size_y = grid_bottom_y / GRID_HEIGHT
 scroll_offset = 0
 BUTTON_GAP = 10
 BUTTON_BASE_WIDTH = 50
+TOOLBAR_HEIGHT = 60
 BUTTON_HEIGHT = TOOLBAR_HEIGHT - BUTTON_GAP
 
 # Fonts
@@ -38,15 +57,6 @@ font = pygame.font.Font(None, 32)
 title_font = pygame.font.Font(None, 48)
 label_font = pygame.font.SysFont("comicsans", 15)
 
-# --- 1. CONFIGURATION STATIQUE ---
-GRID_WIDTH = 100
-GRID_HEIGHT = 80
-
-SCROLL_BUTTON_WIDTH = 50
-
-# Dimensions de la fenêtre par défaut
-DEFAULT_WINDOW_WIDTH = 1000
-DEFAULT_WINDOW_HEIGHT = 700
 
 # Couleurs pour les types de terrain (MAINTENU UNIQUEMENT POUR L'AFFICHAGE DE L'ui)
 COLORS = {
@@ -58,6 +68,7 @@ COLORS = {
 }
 
 clock = pygame.time.Clock()
+
 # --- Toolbar ---
 TOOLBAR_BUTTONS = [
     {"type": 0, "label": "Water"},
@@ -74,10 +85,6 @@ TOOLBAR_BUTTONS = [
 ]
 CURRENT_TERRAIN = TOOLBAR_BUTTONS[0]["type"]
 
-BUTTON_GAP = 10
-BUTTON_BASE_WIDTH = 50
-BUTTON_HEIGHT = TOOLBAR_HEIGHT - BUTTON_GAP
-
 BRUSH_SIZES = [1, 4, 16, 64]
 CURRENT_BRUSH = 1  # default 1x1
 
@@ -85,7 +92,6 @@ TERRAIN_IMAGES_RAW = {}
 TERRAIN_IMAGES = {}
 
 # --- World Time Simulation ---
-timer_active = False
 MAX_DAYS = 1000
 world_minutes = 0
 world_hours = 0

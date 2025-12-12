@@ -9,17 +9,11 @@ from assets import *
 from ui.minimap.minimap import draw_minimap, handle_minimap_click, handle_minimap_drag
 from ui.timer.timer import timer, draw_timer, update_time_from_bar, update_day_from_bar, handle_day_bar_click
 from ui.toolbar.toolbar import handle_toolbar_click, draw_toolbar
+from todo import get_dimensions
 
 # 1. Initialiser Pygame une seule fois
 pygame.init()
 pygame.display.set_caption("Créateur d'île - Pygame")
-
-# 2. Définir le mode vidéo (création de l'écran)
-FULLSCREEN_MODE = pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
-current_screen_flags = 0
-
-# C'est cette ligne qui définit le mode vidéo et permet le convert_alpha()
-screen = pygame.display.set_mode((G.DEFAULT_WINDOW_WIDTH, G.DEFAULT_WINDOW_HEIGHT), current_screen_flags)
 
 # 3. Charger les images (Maintenant que le mode vidéo est défini)
 try:
@@ -39,43 +33,22 @@ except pygame.error as e:
         f"Erreur de chargement d'image : Vérifiez l'existence des fichiers dans 'assets/'. Erreur: {e}")
     sys.exit()
 
-# --- FIN DE L'INITIALISATION RÉORGANISÉE ---
-
-
-# Définition des boutons dans la barre d'outils
-
-
-
-
-
-
-# --- 3. FONCTIONS DE GESTION DU MONDE (INCHANGÉES) ---
-
-def get_dimensions():
-    scr_w, scr_h = screen.get_size()
-    grid_bottom_y = scr_h - G.TOOLBAR_HEIGHT
-    return float(scr_w), float(scr_h), float(grid_bottom_y)
-
-
 def toggle_fullscreen():
     """Bascule entre mode fenêtre (taille par défaut) et plein écran."""
-    global screen, current_screen_flags
-
-    if current_screen_flags & pygame.FULLSCREEN:
-        current_screen_flags &= ~pygame.FULLSCREEN
-        screen = pygame.display.set_mode((G.DEFAULT_WINDOW_WIDTH, G.DEFAULT_WINDOW_HEIGHT), current_screen_flags)
+    if G.current_screen_flags & pygame.FULLSCREEN:
+        G.current_screen_flags &= ~pygame.FULLSCREEN
+        G.screen = pygame.display.set_mode((G.DEFAULT_WINDOW_WIDTH, G.DEFAULT_WINDOW_HEIGHT), G.current_screen_flags)
     else:
-        current_screen_flags |= FULLSCREEN_MODE
+        G.current_screen_flags |= G.FULLSCREEN_MODE
         screen_info = pygame.display.Info()
-        screen = pygame.display.set_mode((screen_info.current_w, screen_info.current_h), current_screen_flags)
+        G.screen = pygame.display.set_mode((screen_info.current_w, screen_info.current_h), G.current_screen_flags)
 
 
 def generate_random_world():
     """Génère un monde aléatoire avec Simplex Noise pour des formes naturelles et biomes mélangés."""
-    global world_grid
 
     # Réinitialisation de la caméra et du zoom
-    G.TILE_SIZE = G.INIT_G.TILE_SIZE
+    G.TILE_SIZE = G.INIT_TILE_SIZE
     camera_x = 0.0
     camera_y = 0.0
 
@@ -198,7 +171,7 @@ def draw_world(screen_width, grid_bottom_y):
 
     for row in range(start_row, end_row):
         for col in range(start_col, end_col):
-            terrain_type = world_grid[row][col]
+            terrain_type = G.world_grid[row][col]
 
             # Utiliser l'image redimensionnée
             image_to_draw = TERRAIN_IMAGES.get(terrain_type)
@@ -208,7 +181,7 @@ def draw_world(screen_width, grid_bottom_y):
                 screen_y = row * G.TILE_SIZE - camera_y
 
                 # Dessin de l'image (texture)
-                screen.blit(image_to_draw, (screen_x, screen_y))
+                G.screen.blit(image_to_draw, (screen_x, screen_y))
 
 
 # --- 5. GESTION DE L'ÉCRAN DE DÉMARRAGE (INCHANGÉE) ---
@@ -217,26 +190,26 @@ START_BUTTONS = []
 
 
 def draw_start_screen(screen_width, screen_height):
-    screen.fill((20, 20, 40))
+    G.screen.fill((20, 20, 40))
 
     title_surface = G.title_font.render("Créateur de Monde Sandbox", True, (255, 255, 255))
     title_rect = title_surface.get_rect(center=(int(screen_width / 2), int(screen_height / 4)))
-    screen.blit(title_surface, title_rect)
+    G.screen.blit(title_surface, title_rect)
 
     button_w, button_h = 300, 60
     center_x = screen_width / 2
 
     btn1_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 - button_h - 10, button_w, button_h)
-    pygame.draw.rect(screen, (50, 150, 50), btn1_rect, border_radius=10)
+    pygame.draw.rect(G.screen, (50, 150, 50), btn1_rect, border_radius=10)
     text1 = G.font.render("Créer de zéro (Eau)", True, (255, 255, 255))
     text1_rect = text1.get_rect(center=btn1_rect.center)
-    screen.blit(text1, text1_rect)
+    G.screen.blit(text1, text1_rect)
 
     btn2_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 + 10, button_w, button_h)
-    pygame.draw.rect(screen, (150, 50, 50), btn2_rect, border_radius=10)
+    pygame.draw.rect(G.screen, (150, 50, 50), btn2_rect, border_radius=10)
     text2 = G.font.render("Monde aléatoire (Organique)", True, (255, 255, 255))
     text2_rect = text2.get_rect(center=btn2_rect.center)
-    screen.blit(text2, text2_rect)
+    G.screen.blit(text2, text2_rect)
 
     global START_BUTTONS
     START_BUTTONS = [
@@ -246,25 +219,21 @@ def draw_start_screen(screen_width, screen_height):
 
 
 def handle_start_screen_click(mouse_pos):
-    global APP_STATE, world_grid
-
     for btn in START_BUTTONS:
         if btn["rect"].collidepoint(mouse_pos):
             if btn["action"] == "NEW":
-                world_grid = np.zeros((G.GRID_HEIGHT, G.GRID_WIDTH), dtype=int).tolist()
-                APP_STATE = "GAME_SCREEN"
+                G.world_grid = np.zeros((G.GRID_HEIGHT, G.GRID_WIDTH), dtype=int).tolist()
+                G.APP_STATE = "GAME_SCREEN"
 
             elif btn["action"] == "RANDOM":
                 generate_random_world()
-                APP_STATE = "GAME_SCREEN"
+                G.APP_STATE = "GAME_SCREEN"
             return True
     return False
 
 
-# --- 6. BOUCLE PRINCIPALE DE JEU (INCHANGÉE) ---
 while G.running:
-    screen_width, screen_height, grid_bottom_y = get_dimensions()
-
+    get_dimensions()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             G.running = False
@@ -277,20 +246,20 @@ while G.running:
             mouse_pos = pygame.mouse.get_pos()
 
             if G.timer_button.collidepoint(event.pos):
-                G.G.timer_active = not G.G.timer_active # toggle
+                G.timer_active = not G.timer_active # toggle
 
             if G.TIME_BAR_RECT.collidepoint(event.pos):
                 G.time_bar_dragging = True
                 G.timer_active = False  # pause time while scrubbing
                 # immediately set time based on click
                 rel_x = (event.pos[0] - G.TIME_BAR_RECT.x) / G.TIME_BAR_RECT.width
-                world_hours = rel_x * 24
+                G.world_hours = rel_x * 24
 
             handle_day_bar_click(event.pos)
 
             # --- Priorité : clic sur la minimap ---
             if G.APP_STATE == "GAME_SCREEN":
-                if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
+                if handle_minimap_click(mouse_pos, G.screen_width, G.grid_bottom_y):
                     # On empêche le reste du code de traiter ce clic
                     G.is_drawing = False
                     G.is_panning = False
@@ -301,9 +270,9 @@ while G.running:
 
             elif G.APP_STATE == "GAME_SCREEN":
                 if event.button == 1:  # Clic Gauche (Dessin/ui)
-                    if handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
+                    if handle_toolbar_click(mouse_pos, G.screen_width, G.grid_bottom_y):
                         G.is_drawing = False
-                    elif mouse_pos[1] < grid_bottom_y:
+                    elif mouse_pos[1] < G.grid_bottom_y:
                         G.is_drawing = True
 
                 elif event.button == 3:  # Clic Droit (Déplacement)
@@ -311,10 +280,10 @@ while G.running:
                     last_mouse_pos = mouse_pos
 
                 elif event.button == 4:  # Molette haut (Zoom in)
-                    G.TILE_SIZE = min(64.0, G.TILE_SIZE + 2.0)
+                    TILE_SIZE = min(64.0, TILE_SIZE + 2.0)
 
                 elif event.button == 5:  # Molette bas (Zoom out)
-                    G.TILE_SIZE = max(4.0, G.TILE_SIZE - 2.0)
+                    TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
@@ -335,7 +304,7 @@ while G.running:
 
             # Priorité : si on est en train de drag la minimap → ignorer le reste
             if G.APP_STATE == "GAME_SCREEN" and G.minimap_dragging:
-                handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
+                handle_minimap_drag(mouse_pos, G.screen_width, G.grid_bottom_y)
                 continue
 
             # Panning clic droit
@@ -350,21 +319,21 @@ while G.running:
     G.screen.fill((0, 0, 0))
 
     if G.APP_STATE == "START_SCREEN":
-        draw_start_screen(screen_width, screen_height)
+        draw_start_screen(G.screen_width, G.screen_height)
 
     elif G.APP_STATE == "GAME_SCREEN":
         # 1. Dessiner le monde (maintenant avec des images) et démarrer timer
-        draw_world(screen_width, grid_bottom_y)
+        draw_world(G.screen_width, G.grid_bottom_y)
 
         # 2. Application du Pinceau (Dessin)
         if G.is_drawing:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            if mouse_y < grid_bottom_y:
+            if mouse_y < G.grid_bottom_y:
                 world_x = mouse_x + G.camera_x
                 world_y = mouse_y + G.camera_y
 
-                grid_col = int(world_x // G.TILE_SIZE)
-                grid_row = int(world_y // G.TILE_SIZE)
+                grid_col = int(world_x // TILE_SIZE)
+                grid_row = int(world_y // TILE_SIZE)
 
                 if 0 <= grid_col < G.GRID_WIDTH and 0 <= grid_row < G.GRID_HEIGHT:
                     # compute offsets so that we paint an exact CURRENT_BRUSH x CURRENT_BRUSH square
@@ -378,12 +347,12 @@ while G.running:
                             if 0 <= r < G.GRID_HEIGHT and 0 <= c < G.GRID_WIDTH:
                                 G.world_grid[r][c] = G.CURRENT_TERRAIN
         if G.timer_active:
-            world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
+            G.world_hours, G.world_days, G.display_hours, G.world_minutes = timer(G.world_hours, G.world_days)
 
         # 3. Dessiner l'ui
-        draw_toolbar(screen_width, grid_bottom_y)
-        draw_minimap(screen_width, grid_bottom_y)
-        draw_timer(world_days)
+        draw_toolbar(G.screen_width, G.grid_bottom_y)
+        draw_minimap(G.screen_width, G.grid_bottom_y)
+        draw_timer(G.world_days)
 
     pygame.display.flip()
     G.clock.tick(60)

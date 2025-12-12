@@ -1,34 +1,21 @@
 import pygame
 import sys
+
 import random # A voir si nécessaire
 import math # A voir si nécessaire
 import numpy as np # A voir si nécessaire
 from opensimplex import OpenSimplex # A voir si nécessaire
+
 import globals as G
 from ui.minimap.minimap import draw_minimap, handle_minimap_click, handle_minimap_drag
 from ui.timer.timer import timer, draw_timer, update_time_from_bar, update_day_from_bar, handle_day_bar_click
 from ui.toolbar.toolbar import handle_toolbar_click, draw_toolbar
+from todo import get_dimensions
 
-from todo import *
-
-clock = pygame.time.Clock()
-
-# --- World Time Simulation ---
-timer_active = False
-
-
-running = True
-is_drawing = False
-time_bar_dragging = False
-day_bar_dragging = False
-minimap_dragging = False
-
-while running:
-    screen_width, screen_height, grid_bottom_y = get_dimensions()
-
+while G.running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            G.running = False
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F11:
@@ -38,23 +25,23 @@ while running:
             mouse_pos = pygame.mouse.get_pos()
 
             if G.timer_button.collidepoint(event.pos):
-                timer_active = not timer_active # toggle
+                G.timer_active = not G.timer_active # toggle
 
             if G.TIME_BAR_RECT.collidepoint(event.pos):
-                time_bar_dragging = True
-                timer_active = False  # pause time while scrubbing
+                G.time_bar_dragging = True
+                G.timer_active = False  # pause time while scrubbing
                 # immediately set time based on click
                 rel_x = (event.pos[0] - G.TIME_BAR_RECT.x) / G.TIME_BAR_RECT.width
-                world_hours = rel_x * 24
+                G.world_hours = rel_x * 24
 
             handle_day_bar_click(event.pos)
 
             # --- Priorité : clic sur la minimap ---
             if G.APP_STATE == "GAME_SCREEN":
-                if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
+                if handle_minimap_click(mouse_pos, G.screen_width, G.grid_bottom_y):
                     # On empêche le reste du code de traiter ce clic
-                    is_drawing = False
-                    is_panning = False
+                    G.is_drawing = False
+                    G.is_panning = False
                     continue
 
             if G.APP_STATE == "START_SCREEN":
@@ -62,13 +49,13 @@ while running:
 
             elif G.APP_STATE == "GAME_SCREEN":
                 if event.button == 1:  # Clic Gauche (Dessin/ui)
-                    if handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
-                        is_drawing = False
-                    elif mouse_pos[1] < grid_bottom_y:
-                        is_drawing = True
+                    if handle_toolbar_click(mouse_pos, G.screen_width, G.grid_bottom_y):
+                        G.is_drawing = False
+                    elif mouse_pos[1] < G.grid_bottom_y:
+                        G.is_drawing = True
 
                 elif event.button == 3:  # Clic Droit (Déplacement)
-                    is_panning = True
+                    G.is_panning = True
                     last_mouse_pos = mouse_pos
 
                 elif event.button == 4:  # Molette haut (Zoom in)
@@ -79,28 +66,28 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
-                is_drawing = False
-                is_dragging = False
-                time_bar_dragging = False
-                day_bar_dragging = False
-                minimap_dragging = False
+                G.is_drawing = False
+                G.is_dragging = False
+                G.time_bar_dragging = False
+                G.day_bar_dragging = False
+                G.minimap_dragging = False
             elif event.button == 3:
-                is_panning = False
+                G.is_panning = False
 
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
-            if time_bar_dragging:
+            if G.time_bar_dragging:
                 update_time_from_bar(event.pos)
-            if day_bar_dragging:
+            if G.day_bar_dragging:
                 update_day_from_bar(event.pos)
 
             # Priorité : si on est en train de drag la minimap → ignorer le reste
-            if G.APP_STATE == "GAME_SCREEN" and minimap_dragging:
-                handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
+            if G.APP_STATE == "GAME_SCREEN" and G.minimap_dragging:
+                handle_minimap_drag(mouse_pos, G.screen_width, G.grid_bottom_y)
                 continue
 
             # Panning clic droit
-            if G.APP_STATE == "GAME_SCREEN" and is_panning:
+            if G.APP_STATE == "GAME_SCREEN" and G.is_panning:
                 dx = mouse_pos[0] - last_mouse_pos[0]
                 dy = mouse_pos[1] - last_mouse_pos[1]
                 G.camera_x -= dx
@@ -111,16 +98,16 @@ while running:
     G.screen.fill((0, 0, 0))
 
     if G.APP_STATE == "START_SCREEN":
-        draw_start_screen(screen_width, screen_height)
+        draw_start_screen(G.screen_width, G.screen_height)
 
     elif G.APP_STATE == "GAME_SCREEN":
         # 1. Dessiner le monde (maintenant avec des images) et démarrer timer
-        draw_world(screen_width, grid_bottom_y)
+        draw_world(G.screen_width, G.grid_bottom_y)
 
         # 2. Application du Pinceau (Dessin)
-        if is_drawing:
+        if G.is_drawing:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            if mouse_y < grid_bottom_y:
+            if mouse_y < G.grid_bottom_y:
                 world_x = mouse_x + G.camera_x
                 world_y = mouse_y + G.camera_y
 
@@ -138,16 +125,16 @@ while running:
                             c = grid_col + dc
                             if 0 <= r < G.GRID_HEIGHT and 0 <= c < G.GRID_WIDTH:
                                 G.world_grid[r][c] = G.CURRENT_TERRAIN
-        if timer_active:
-            world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
+        if G.timer_active:
+            G.world_hours, G.world_days, G.display_hours, G.world_minutes = timer(G.world_hours, G.world_days)
 
         # 3. Dessiner l'ui
-        draw_toolbar(screen_width, grid_bottom_y)
-        draw_minimap(screen_width, grid_bottom_y)
-        draw_timer(world_days)
+        draw_toolbar(G.screen_width, G.grid_bottom_y)
+        draw_minimap(G.screen_width, G.grid_bottom_y)
+        draw_timer(G.world_days)
 
     pygame.display.flip()
-    clock.tick(60)
+    G.clock.tick(60)
 
 pygame.quit()
 sys.exit()
