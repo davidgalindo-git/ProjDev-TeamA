@@ -16,8 +16,8 @@ TOOLBAR_HEIGHT = 60
 SCROLL_BUTTON_WIDTH = 50
 
 # Dimensions de la fenêtre par défaut
-DEFAULT_WINDOW_WIDTH = 1000
-DEFAULT_WINDOW_HEIGHT = 700
+DEFAULT_WINDOW_WIDTH = 900
+DEFAULT_WINDOW_HEIGHT = 780
 
 # Paramètres pour la grille de placement d'éléments fins (8x8)
 ELEMENT_GRID_SIZE = 8  # La taille de la sous-cellule en pixels (moitié de 16)
@@ -26,6 +26,10 @@ ELEMENT_SCALE_FACTOR = int(INIT_TILE_SIZE / ELEMENT_GRID_SIZE)  # 16 / 8 = 2
 # Dimensions de la grille d'éléments (double de la grille de terrain)
 ELEMENT_GRID_WIDTH = GRID_WIDTH * ELEMENT_SCALE_FACTOR  # 200
 ELEMENT_GRID_HEIGHT = GRID_HEIGHT * ELEMENT_SCALE_FACTOR  # 160
+
+# Permet le redimensionnement
+current_screen_flags = pygame.RESIZABLE | pygame.DOUBLEBUF
+screen =pygame.display.set_mode((DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT))
 
 # --- Taille des éléments en cellules 8x8 ---
 BIG_ROCK_SIZE_32x32 = 4  # La grande pierre est 4x4 cellules d'éléments (32x32px initial)
