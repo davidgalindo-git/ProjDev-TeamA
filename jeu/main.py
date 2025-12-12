@@ -9,10 +9,8 @@ from screen.screen import get_dimensions, toggle_fullscreen, draw_start_screen, 
 from world.draw_world import draw_world, draw_elements, draw_brush_preview, generate_random_world
 #from poubelle.main_david_old import * (ceci fait tout marcher car ça importe l'ancien main où tout était fonctionnel)
 
-# Appeler les fonctions pour initialiser les variables importantes (dimensions de l'écran, images)
-
-
 while G.running:
+    # Appeler les fonctions pour initialiser les variables importantes (dimensions de l'écran, images)
     get_dimensions()
     load_all_assets()
     update_start_buttons()
