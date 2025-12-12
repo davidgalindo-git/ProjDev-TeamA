@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import jeu.globals as G
+from jeu.world.world import generate_random_world
 
 def get_dimensions():
     scr_w, scr_h = G.screen.get_size()
@@ -29,7 +30,7 @@ def handle_start_screen_click(mouse_pos):
                 G.APP_STATE = "GAME_SCREEN"
 
             elif btn["action"] == "RANDOM":
-                G.generate_random_world()
+                generate_random_world()
                 G.APP_STATE = "GAME_SCREEN"
             return True
     return False
@@ -41,23 +42,12 @@ def draw_start_screen(screen_width, screen_height):
     title_rect = title_surface.get_rect(center=(int(screen_width / 2), int(screen_height / 4)))
     G.screen.blit(title_surface, title_rect)
 
-    button_w, button_h = 300, 60
-    center_x = screen_width / 2
-
-    btn1_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 - button_h - 10, button_w, button_h)
-    pygame.draw.rect(G.screen, (50, 150, 50), btn1_rect, border_radius=10)
+    pygame.draw.rect(G.screen, (50, 150, 50), G.btn1_rect, border_radius=10)
     text1 = G.font.render("Créer de zéro (Eau)", True, (255, 255, 255))
-    text1_rect = text1.get_rect(center=btn1_rect.center)
+    text1_rect = text1.get_rect(center=G.btn1_rect.center)
     G.screen.blit(text1, text1_rect)
 
-    btn2_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 + 10, button_w, button_h)
-    pygame.draw.rect(G.screen, (150, 50, 50), btn2_rect, border_radius=10)
+    pygame.draw.rect(G.screen, (150, 50, 50), G.btn2_rect, border_radius=10)
     text2 = G.font.render("Monde aléatoire (Organique)", True, (255, 255, 255))
-    text2_rect = text2.get_rect(center=btn2_rect.center)
+    text2_rect = text2.get_rect(center=G.btn2_rect.center)
     G.screen.blit(text2, text2_rect)
-
-    global START_BUTTONS
-    START_BUTTONS = [
-        {"rect": btn1_rect, "action": "NEW"},
-        {"rect": btn2_rect, "action": "RANDOM"}
-    ]

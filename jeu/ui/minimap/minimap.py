@@ -1,4 +1,5 @@
-from jeu.main_david_old import *
+import pygame
+import math
 import jeu.globals as G
 
 def draw_minimap(screen_width, grid_bottom_y):

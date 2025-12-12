@@ -33,6 +33,14 @@ grid_bottom_y = 0.0
 
 # --- ÉTATS DE L'APPLICATION ---
 APP_STATE = "START_SCREEN"
+button_w, button_h = 300, 60
+center_x = screen_width / 2
+btn1_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 - button_h - 10, button_w, button_h)
+btn2_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 + 10, button_w, button_h)
+START_BUTTONS = [
+        {"rect": btn1_rect, "action": "NEW"},
+        {"rect": btn2_rect, "action": "RANDOM"}
+    ]
 
 # Variables de l'état du jeu
 INIT_TILE_SIZE = 16.0

@@ -1,5 +1,9 @@
+import pygame
 import jeu.globals as G
-from jeu.main_david_old import *
+
+# ----------------------------------------------------------------------
+# TIMER MANAGEMENT
+# ----------------------------------------------------------------------
 
 def timer():
     """Update world time based on real delta time."""

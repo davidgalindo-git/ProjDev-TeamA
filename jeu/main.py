@@ -8,6 +8,7 @@ from ui.toolbar.toolbar import handle_toolbar_click, draw_toolbar
 from screen.screen import get_dimensions, toggle_fullscreen, draw_start_screen, handle_start_screen_click
 from world.draw_world import draw_world, draw_elements, draw_brush_preview, generate_random_world
 
+# Appeler les fonctions pour initialiser les variables importantes (dimensions de l'écran, images)
 get_dimensions()
 load_all_assets()
 
