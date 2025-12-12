@@ -2,6 +2,7 @@ from jeu.main_david_old import *
 import jeu.globals as G
 
 def draw_minimap(screen_width, grid_bottom_y):
+    """Dessine la minimap en haut à droite et le rectangle de la vue."""
     MAP_W = 200
     MAP_H = 160
     MARGIN = 10

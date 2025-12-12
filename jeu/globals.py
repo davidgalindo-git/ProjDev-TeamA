@@ -12,6 +12,7 @@ time_bar_dragging = False
 day_bar_dragging = False
 minimap_dragging = False
 timer_active = False
+is_panning = False
 
 # --- 1. CONFIGURATION STATIQUE ---
 GRID_WIDTH = 100
@@ -38,9 +39,7 @@ INIT_TILE_SIZE = 16.0
 TILE_SIZE = INIT_TILE_SIZE
 camera_x = 0.0
 camera_y = 0.0
-is_panning = False
 last_mouse_pos = (0, 0)
-minimap_dragging = False
 minimap_drag_offset = (0, 0)
 min_tile_size_x = screen_width / GRID_WIDTH
 min_tile_size_y = grid_bottom_y / GRID_HEIGHT
@@ -64,18 +63,22 @@ COLORS = {
     1: (0, 150, 0),  # Herbe
     2: (150, 75, 0),  # Montagne
     3: (240, 230, 140),  # Sable
-    4: (120, 120, 120)  # Pierre
+    4: (120, 120, 120),  # Pierre
+    5: (150, 150, 150),  # Rocher
+    6: (150, 150, 150),  # G.Rocher
 }
 
 clock = pygame.time.Clock()
 
 # --- Toolbar ---
 TOOLBAR_BUTTONS = [
-    {"type": 0, "label": "Water"},
-    {"type": 1, "label": "Grass"},
-    {"type": 2, "label": "Dirt"},
-    {"type": 3, "label": "Sand"},
-    {"type": 4, "label": "Stone"},
+    {"label": "Eau", "type": 0},
+    {"label": "Terre", "type": 1},
+    {"label": "Herbe", "type": 2},
+    {"label": "Sable", "type": 3},
+    {"label": "Stone", "type": 4},
+    {"label": "Rocher", "type": 5}, # ID 5 = Element 1x1
+    {"label": "G.Roch", "type": 6}, # ID 6 = Element 4x4
     {"type": "BRUSH_1", "label": "x1", "brush": 1},
     {"type": "BRUSH_2", "label": "x2", "brush": 2},
     {"type": "BRUSH_3", "label": "x4", "brush": 4},
@@ -83,11 +86,13 @@ TOOLBAR_BUTTONS = [
     {"type": "BRUSH_5", "label": "x16", "brush": 16},
     {"type": "BRUSH_6", "label": "x32", "brush": 32}
 ]
-CURRENT_TERRAIN = TOOLBAR_BUTTONS[0]["type"]
+
+CURRENT_TERRAIN = TOOLBAR_BUTTONS[1]["type"]
 
 BRUSH_SIZES = [1, 4, 16, 64]
 CURRENT_BRUSH = 1  # default 1x1
 
+ASSETS_PATH = "assets/"
 TERRAIN_IMAGES_RAW = {}
 TERRAIN_IMAGES = {}
 

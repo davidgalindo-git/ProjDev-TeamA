@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import jeu.globals as G
+
 def get_dimensions():
     scr_w, scr_h = G.screen.get_size()
 

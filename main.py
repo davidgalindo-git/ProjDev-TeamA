@@ -7,7 +7,7 @@ import numpy as np
 from config_cg import *
 from world.world_state_cg import World
 from world.generation_cg import generate_random_world
-from jeu.draw_world import draw_world
+from jeu.world.draw_world import draw_world
 from rendering.draw_element_cg import draw_elements
 from jeu.toolbar_cg import draw_toolbar, handle_toolbar_click
 from ui.minimap_cg import draw_minimap, handle_minimap_drag, handle_minimap_click

@@ -2,19 +2,16 @@ import pygame
 import jeu.globals as G
 
 # --- 1. GESTION DES CLICS ---
-def handle_toolbar_click(mouse_pos, world_instance, scroll_offset_val, get_dimensions_func):
+def handle_toolbar_click(mouse_pos, world_instance, scroll_offset_val):
     """
     Gère le clic sur la barre d'outils. Modifie world_instance en place.
     Retourne (nouveau_scroll_offset, True/False si cliqué).
     """
-    # Récupération des dimensions via la fonction passée en argument
-    screen_width, screen_height, grid_bottom_y = get_dimensions_func()
-
-    if mouse_pos[1] > grid_bottom_y:
+    if mouse_pos[1] > G.grid_bottom_y:
 
         # 1. Gérer les flèches de défilement
-        left_arrow_rect = pygame.Rect(0, grid_bottom_y, G.SCROLL_BUTTON_WIDTH, G.TOOLBAR_HEIGHT)
-        right_arrow_rect = pygame.Rect(screen_width - G.SCROLL_BUTTON_WIDTH, grid_bottom_y, G.SCROLL_BUTTON_WIDTH,
+        left_arrow_rect = pygame.Rect(0, G.grid_bottom_y, G.SCROLL_BUTTON_WIDTH, G.TOOLBAR_HEIGHT)
+        right_arrow_rect = pygame.Rect(G.screen_width - G.SCROLL_BUTTON_WIDTH, G.grid_bottom_y, G.SCROLL_BUTTON_WIDTH,
                                        G.TOOLBAR_HEIGHT)
 
         # Clic sur la flèche gauche
@@ -25,7 +22,7 @@ def handle_toolbar_click(mouse_pos, world_instance, scroll_offset_val, get_dimen
         # Clic sur la flèche droite
         if right_arrow_rect.collidepoint(mouse_pos):
             total_button_width = (G.BUTTON_BASE_WIDTH + G.BUTTON_GAP) * len(G.TOOLBAR_BUTTONS)
-            available_width = screen_width - 2 * G.SCROLL_BUTTON_WIDTH - G.BUTTON_GAP
+            available_width = G.screen_width - 2 * G.SCROLL_BUTTON_WIDTH - G.BUTTON_GAP
             max_offset = max(0, total_button_width - available_width)
 
             scroll_offset_val = min(max_offset, scroll_offset_val + (G.BUTTON_BASE_WIDTH + G.BUTTON_GAP) * 2)
@@ -55,18 +52,17 @@ def handle_toolbar_click(mouse_pos, world_instance, scroll_offset_val, get_dimen
 
 
 # --- 2. FONCTION DE DESSIN ---
-def draw_toolbar(screen_surface, world_instance, scroll_offset_val, get_dimensions_func, label_font):
+def draw_toolbar(screen_surface, world_instance, scroll_offset_val, label_font):
     """Dessine la barre d'outils en utilisant les arguments passés."""
-    screen_width, screen_height, grid_bottom_y = get_dimensions_func()
 
     # Dessiner le fond de la toolbar
-    toolbar_rect = pygame.Rect(0, grid_bottom_y, screen_width, G.TOOLBAR_HEIGHT)
+    toolbar_rect = pygame.Rect(0, G.grid_bottom_y, G.screen_width, G.TOOLBAR_HEIGHT)
     pygame.draw.rect(screen_surface, (50, 50, 50), toolbar_rect)
 
     # 1. Dessiner les flèches de défilement
-    left_arrow_rect = pygame.Rect(0, grid_bottom_y, G.SCROLL_BUTTON_WIDTH, G.TOOLBAR_HEIGHT)
+    left_arrow_rect = pygame.Rect(0, G.grid_bottom_y, G.SCROLL_BUTTON_WIDTH, G.TOOLBAR_HEIGHT)
     pygame.draw.rect(screen_surface, (80, 80, 80), left_arrow_rect)
-    right_arrow_rect = pygame.Rect(screen_width - G.SCROLL_BUTTON_WIDTH, grid_bottom_y, G.SCROLL_BUTTON_WIDTH,
+    right_arrow_rect = pygame.Rect(G.screen_width - G.SCROLL_BUTTON_WIDTH, G.grid_bottom_y, G.SCROLL_BUTTON_WIDTH,
                                    G.TOOLBAR_HEIGHT)
     pygame.draw.rect(screen_surface, (80, 80, 80), right_arrow_rect)
 
@@ -83,11 +79,11 @@ def draw_toolbar(screen_surface, world_instance, scroll_offset_val, get_dimensio
     ])
 
     # 2. Dessiner la zone des boutons (clipping pour le défilement)
-    button_area_rect = pygame.Rect(G.SCROLL_BUTTON_WIDTH, grid_bottom_y, screen_width - 2 * G.SCROLL_BUTTON_WIDTH,
+    button_area_rect = pygame.Rect(G.SCROLL_BUTTON_WIDTH, G.grid_bottom_y, G.screen_width - 2 * G.SCROLL_BUTTON_WIDTH,
                                    G.TOOLBAR_HEIGHT)
     screen_surface.set_clip(button_area_rect)
 
-    button_y = grid_bottom_y + G.BUTTON_GAP / 2
+    button_y = G.grid_bottom_y + G.BUTTON_GAP / 2
 
     # 3. Dessiner chaque bouton
     for i, btn in enumerate(G.TOOLBAR_BUTTONS):
