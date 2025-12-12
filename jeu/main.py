@@ -5,15 +5,17 @@ from jeu.assets.images import load_all_assets
 from ui.minimap.minimap import draw_minimap, handle_minimap_click, handle_minimap_drag
 from ui.timer.timer import timer, draw_timer, update_time_from_bar, update_day_from_bar, handle_day_bar_click
 from ui.toolbar.toolbar import handle_toolbar_click, draw_toolbar
-from screen.screen import get_dimensions, toggle_fullscreen, draw_start_screen, handle_start_screen_click
+from screen.screen import get_dimensions, toggle_fullscreen, draw_start_screen, handle_start_screen_click, update_start_buttons
 from world.draw_world import draw_world, draw_elements, draw_brush_preview, generate_random_world
 #from poubelle.main_david_old import * (ceci fait tout marcher car ça importe l'ancien main où tout était fonctionnel)
 
 # Appeler les fonctions pour initialiser les variables importantes (dimensions de l'écran, images)
-get_dimensions()
+
 load_all_assets()
 
 while G.running:
+    get_dimensions()
+    update_start_buttons()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             G.running = False

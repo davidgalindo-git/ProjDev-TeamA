@@ -11,6 +11,22 @@ def get_dimensions():
 
     G.grid_bottom_y = scr_h - G.TOOLBAR_HEIGHT
 
+def update_start_buttons():
+    center_x = G.screen_width / 2
+
+    btn1_rect = pygame.Rect(center_x - G.button_w / 2,
+                            G.screen_height / 2 - G.button_h - 10,
+                            G.button_w, G.button_h)
+
+    btn2_rect = pygame.Rect(center_x - G.button_w / 2,
+                            G.screen_height / 2 + 10,
+                            G.button_w, G.button_h)
+
+    G.START_BUTTONS = [
+        {"rect": btn1_rect, "action": "NEW"},
+        {"rect": btn2_rect, "action": "RANDOM"},
+    ]
+
 
 def toggle_fullscreen():
     if G.current_screen_flags & pygame.FULLSCREEN:
@@ -38,16 +54,24 @@ def handle_start_screen_click(mouse_pos):
 def draw_start_screen(screen_width, screen_height):
     G.screen.fill((20, 20, 40))
 
+    # Title
     title_surface = G.title_font.render("Créateur de Monde Sandbox", True, (255, 255, 255))
-    title_rect = title_surface.get_rect(center=(int(screen_width / 2), int(screen_height / 4)))
+    title_rect = title_surface.get_rect(center=(screen_width / 2, screen_height / 4))
     G.screen.blit(title_surface, title_rect)
 
-    pygame.draw.rect(G.screen, (50, 150, 50), G.btn1_rect, border_radius=10)
-    text1 = G.font.render("Créer de zéro (Eau)", True, (255, 255, 255))
-    text1_rect = text1.get_rect(center=G.btn1_rect.center)
-    G.screen.blit(text1, text1_rect)
+    # Draw buttons from START_BUTTONS
+    for btn in G.START_BUTTONS:
+        rect = btn["rect"]
 
-    pygame.draw.rect(G.screen, (150, 50, 50), G.btn2_rect, border_radius=10)
-    text2 = G.font.render("Monde aléatoire (Organique)", True, (255, 255, 255))
-    text2_rect = text2.get_rect(center=G.btn2_rect.center)
-    G.screen.blit(text2, text2_rect)
+        if btn["action"] == "NEW":
+            color = (50, 150, 50)
+            text = "Créer de zéro (Eau)"
+        else:
+            color = (150, 50, 50)
+            text = "Monde aléatoire (Organique)"
+
+        pygame.draw.rect(G.screen, color, rect, border_radius=10)
+
+        text_surface = G.font.render(text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=rect.center)
+        G.screen.blit(text_surface, text_rect)
