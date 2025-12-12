@@ -1,18 +1,14 @@
 import pygame
 import sys
-
-import random # A voir si nécessaire
-import math # A voir si nécessaire
-import numpy as np # A voir si nécessaire
-from opensimplex import OpenSimplex # A voir si nécessaire
-
 import globals as G
 from ui.minimap.minimap import draw_minimap, handle_minimap_click, handle_minimap_drag
 from ui.timer.timer import timer, draw_timer, update_time_from_bar, update_day_from_bar, handle_day_bar_click
 from ui.toolbar.toolbar import handle_toolbar_click, draw_toolbar
-from todo import get_dimensions
+from screen.screen import get_dimensions, toggle_fullscreen, draw_start_screen, handle_start_screen_click
+from world.world import draw_world
 
 while G.running:
+    get_dimensions()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             G.running = False

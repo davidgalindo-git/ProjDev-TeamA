@@ -2,7 +2,6 @@ import pygame
 import jeu.globals as G
 
 # --- 1. GESTION DES CLICS ---
-
 def handle_toolbar_click(mouse_pos, world_instance, scroll_offset_val, get_dimensions_func):
     """
     Gère le clic sur la barre d'outils. Modifie world_instance en place.
@@ -56,7 +55,6 @@ def handle_toolbar_click(mouse_pos, world_instance, scroll_offset_val, get_dimen
 
 
 # --- 2. FONCTION DE DESSIN ---
-
 def draw_toolbar(screen_surface, world_instance, scroll_offset_val, get_dimensions_func, label_font):
     """Dessine la barre d'outils en utilisant les arguments passés."""
     screen_width, screen_height, grid_bottom_y = get_dimensions_func()

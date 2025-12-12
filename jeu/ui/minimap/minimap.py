@@ -1,6 +1,3 @@
-import pygame
-import math
-
 from jeu.main_david_old import *
 import jeu.globals as G
 

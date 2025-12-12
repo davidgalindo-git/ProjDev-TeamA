@@ -1,4 +1,3 @@
-import pygame
 import jeu.globals as G
 from jeu.main_david_old import *
 
