@@ -33,7 +33,8 @@ grid_bottom_y = 0.0
 
 # --- ÉTATS DE L'APPLICATION ---
 APP_STATE = "START_SCREEN"
-button_w, button_h = 300, 60
+button_w = 300
+button_h = 60
 START_BUTTONS = []
 
 # Variables de l'état du jeu

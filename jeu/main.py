@@ -11,11 +11,12 @@ from world.draw_world import draw_world, draw_elements, draw_brush_preview, gene
 
 # Appeler les fonctions pour initialiser les variables importantes (dimensions de l'écran, images)
 
-load_all_assets()
 
 while G.running:
     get_dimensions()
+    load_all_assets()
     update_start_buttons()
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             G.running = False
@@ -48,6 +49,7 @@ while G.running:
                     continue
 
             if G.APP_STATE == "START_SCREEN":
+                print("start_screen")
                 handle_start_screen_click(mouse_pos)
 
             elif G.APP_STATE == "GAME_SCREEN":

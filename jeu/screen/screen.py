@@ -42,36 +42,26 @@ def handle_start_screen_click(mouse_pos):
     for btn in G.START_BUTTONS:
         if btn["rect"].collidepoint(mouse_pos):
             if btn["action"] == "NEW":
+                print("new")
                 G.world_grid = np.zeros((G.GRID_HEIGHT, G.GRID_WIDTH), dtype=int).tolist()
                 G.APP_STATE = "GAME_SCREEN"
 
             elif btn["action"] == "RANDOM":
+                print("random")
                 generate_random_world()
                 G.APP_STATE = "GAME_SCREEN"
             return True
     return False
 
-def draw_start_screen(screen_width, screen_height):
-    G.screen.fill((20, 20, 40))
+def draw_start_screen(w, h):
+    G.screen.fill((20,20,40))
 
-    # Title
-    title_surface = G.title_font.render("Créateur de Monde Sandbox", True, (255, 255, 255))
-    title_rect = title_surface.get_rect(center=(screen_width / 2, screen_height / 4))
-    G.screen.blit(title_surface, title_rect)
-
-    # Draw buttons from START_BUTTONS
     for btn in G.START_BUTTONS:
         rect = btn["rect"]
 
-        if btn["action"] == "NEW":
-            color = (50, 150, 50)
-            text = "Créer de zéro (Eau)"
-        else:
-            color = (150, 50, 50)
-            text = "Monde aléatoire (Organique)"
+        color = (50, 150, 50) if btn["action"] == "NEW" else (150, 50, 50)
+        text = "Créer de zéro (Eau)" if btn["action"] == "NEW" else "Monde aléatoire (Organique)"
 
         pygame.draw.rect(G.screen, color, rect, border_radius=10)
-
-        text_surface = G.font.render(text, True, (255, 255, 255))
-        text_rect = text_surface.get_rect(center=rect.center)
-        G.screen.blit(text_surface, text_rect)
+        txt = G.font.render(text, True, (255, 255, 255))
+        G.screen.blit(txt, txt.get_rect(center=rect.center))
