@@ -6,6 +6,13 @@ pygame.init()
 TOOLBAR_HEIGHT = 60
 INIT_TILE_SIZE = 16.0
 
+# Flags
+running = True
+is_drawing = False
+time_bar_dragging = False
+day_bar_dragging = False
+minimap_dragging = False
+
 # --- ÉTATS DE L'APPLICATION ---
 APP_STATE = "START_SCREEN"
 
@@ -17,6 +24,8 @@ is_panning = False
 last_mouse_pos = (0, 0)
 minimap_dragging = False
 minimap_drag_offset = (0, 0)
+min_tile_size_x = screen_width / GRID_WIDTH
+min_tile_size_y = grid_bottom_y / GRID_HEIGHT
 
 # Variables de défilement de l'ui
 scroll_offset = 0

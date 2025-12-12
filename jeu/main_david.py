@@ -72,10 +72,10 @@ def toggle_fullscreen():
 
 def generate_random_world():
     """Génère un monde aléatoire avec Simplex Noise pour des formes naturelles et biomes mélangés."""
-    global world_grid, TILE_SIZE, camera_x, camera_y
+    global world_grid
 
     # Réinitialisation de la caméra et du zoom
-    TILE_SIZE = G.INIT_TILE_SIZE
+    G.TILE_SIZE = G.INIT_G.TILE_SIZE
     camera_x = 0.0
     camera_y = 0.0
 
@@ -154,18 +154,18 @@ def generate_random_world():
 
 # --- Fonction de mise à jour des images redimensionnées (INCHANGÉE) ---
 def update_terrain_images():
-    """Redimensionne toutes les textures pour correspondre à la TILE_SIZE actuelle."""
+    """Redimensionne toutes les textures pour correspondre à la G.TILE_SIZE actuelle."""
     global TERRAIN_IMAGES
 
     # Vérifie si le redimensionnement est nécessaire (taille non définie ou différente)
     current_size = TERRAIN_IMAGES.get(0).get_size()[0] if 0 in TERRAIN_IMAGES else -1
 
-    if current_size != int(TILE_SIZE) and TERRAIN_IMAGES_RAW:  # Ajout de la vérification TERRAIN_IMAGES_RAW
+    if current_size != int(G.TILE_SIZE) and TERRAIN_IMAGES_RAW:  # Ajout de la vérification TERRAIN_IMAGES_RAW
         new_images = {}
         for terrain_type, raw_img in TERRAIN_IMAGES_RAW.items():
-            # Redimensionne l'image brute à la TILE_SIZE actuelle
+            # Redimensionne l'image brute à la G.TILE_SIZE actuelle
             new_images[terrain_type] = pygame.transform.scale(
-                raw_img, (int(TILE_SIZE), int(TILE_SIZE))
+                raw_img, (int(G.TILE_SIZE), int(G.TILE_SIZE))
             )
         TERRAIN_IMAGES = new_images
 
@@ -173,29 +173,28 @@ def update_terrain_images():
 def draw_world(screen_width, grid_bottom_y):
     """Dessine la grille visible en utilisant les images redimensionnées (INCHANGÉE)."""
     global camera_x, camera_y
-    global TILE_SIZE
 
     # Correction du Dézoom / Bande Noire (INCHANGÉ)
-    min_tile_size_x = screen_width / G.GRID_WIDTH
-    min_tile_size_y = grid_bottom_y / G.GRID_HEIGHT
+    #G.min_tile_size_x
+    #G.min_tile_size_y
 
-    TILE_SIZE = max(TILE_SIZE, min(min_tile_size_x, min_tile_size_y))
+    G.TILE_SIZE = max(G.TILE_SIZE, min(G.min_tile_size_x, G.min_tile_size_y))
 
     # Correction de la position de la Caméra (INCHANGÉ)
-    max_camera_x = max(0.0, G.GRID_WIDTH * TILE_SIZE - screen_width)
-    max_camera_y = max(0.0, G.GRID_HEIGHT * TILE_SIZE - grid_bottom_y)
+    max_camera_x = max(0.0, G.GRID_WIDTH * G.TILE_SIZE - screen_width)
+    max_camera_y = max(0.0, G.GRID_HEIGHT * G.TILE_SIZE - grid_bottom_y)
 
     camera_x = max(0.0, min(camera_x, max_camera_x))
     camera_y = max(0.0, min(camera_y, max_camera_y))
 
-    # Redimensionner les images pour la TILE_SIZE actuelle
+    # Redimensionner les images pour la G.TILE_SIZE actuelle
     update_terrain_images()
 
     # Dessin des tuiles visibles
-    start_col = max(0, int(camera_x // TILE_SIZE))
-    end_col = min(G.GRID_WIDTH, int((camera_x + screen_width) // TILE_SIZE + 1))
-    start_row = max(0, int(camera_y // TILE_SIZE))
-    end_row = min(G.GRID_HEIGHT, int((camera_y + grid_bottom_y) // TILE_SIZE + 1))
+    start_col = max(0, int(camera_x // G.TILE_SIZE))
+    end_col = min(G.GRID_WIDTH, int((camera_x + screen_width) // G.TILE_SIZE + 1))
+    start_row = max(0, int(camera_y // G.TILE_SIZE))
+    end_row = min(G.GRID_HEIGHT, int((camera_y + grid_bottom_y) // G.TILE_SIZE + 1))
 
     for row in range(start_row, end_row):
         for col in range(start_col, end_col):
@@ -205,8 +204,8 @@ def draw_world(screen_width, grid_bottom_y):
             image_to_draw = TERRAIN_IMAGES.get(terrain_type)
 
             if image_to_draw:
-                screen_x = col * TILE_SIZE - camera_x
-                screen_y = row * TILE_SIZE - camera_y
+                screen_x = col * G.TILE_SIZE - camera_x
+                screen_y = row * G.TILE_SIZE - camera_y
 
                 # Dessin de l'image (texture)
                 screen.blit(image_to_draw, (screen_x, screen_y))
@@ -263,19 +262,12 @@ def handle_start_screen_click(mouse_pos):
 
 
 # --- 6. BOUCLE PRINCIPALE DE JEU (INCHANGÉE) ---
-
-running = True
-is_drawing = False
-time_bar_dragging = False
-day_bar_dragging = False
-minimap_dragging = False
-
-while running:
+while G.running:
     screen_width, screen_height, grid_bottom_y = get_dimensions()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            G.running = False
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F11:
@@ -285,11 +277,11 @@ while running:
             mouse_pos = pygame.mouse.get_pos()
 
             if G.timer_button.collidepoint(event.pos):
-                timer_active = not timer_active # toggle
+                G.G.timer_active = not G.G.timer_active # toggle
 
             if G.TIME_BAR_RECT.collidepoint(event.pos):
-                time_bar_dragging = True
-                timer_active = False  # pause time while scrubbing
+                G.time_bar_dragging = True
+                G.timer_active = False  # pause time while scrubbing
                 # immediately set time based on click
                 rel_x = (event.pos[0] - G.TIME_BAR_RECT.x) / G.TIME_BAR_RECT.width
                 world_hours = rel_x * 24
@@ -300,8 +292,8 @@ while running:
             if G.APP_STATE == "GAME_SCREEN":
                 if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
                     # On empêche le reste du code de traiter ce clic
-                    is_drawing = False
-                    is_panning = False
+                    G.is_drawing = False
+                    G.is_panning = False
                     continue
 
             if G.APP_STATE == "START_SCREEN":
@@ -310,44 +302,44 @@ while running:
             elif G.APP_STATE == "GAME_SCREEN":
                 if event.button == 1:  # Clic Gauche (Dessin/ui)
                     if handle_toolbar_click(mouse_pos, screen_width, grid_bottom_y):
-                        is_drawing = False
+                        G.is_drawing = False
                     elif mouse_pos[1] < grid_bottom_y:
-                        is_drawing = True
+                        G.is_drawing = True
 
                 elif event.button == 3:  # Clic Droit (Déplacement)
-                    is_panning = True
+                    G.is_panning = True
                     last_mouse_pos = mouse_pos
 
                 elif event.button == 4:  # Molette haut (Zoom in)
-                    TILE_SIZE = min(64.0, TILE_SIZE + 2.0)
+                    G.TILE_SIZE = min(64.0, G.TILE_SIZE + 2.0)
 
                 elif event.button == 5:  # Molette bas (Zoom out)
-                    TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
+                    G.TILE_SIZE = max(4.0, G.TILE_SIZE - 2.0)
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
-                is_drawing = False
-                is_dragging = False
-                time_bar_dragging = False
-                day_bar_dragging = False
-                minimap_dragging = False
+                G.is_drawing = False
+                G.is_dragging = False
+                G.time_bar_dragging = False
+                G.day_bar_dragging = False
+                G.minimap_dragging = False
             elif event.button == 3:
-                is_panning = False
+                G.is_panning = False
 
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
-            if time_bar_dragging:
+            if G.time_bar_dragging:
                 update_time_from_bar(event.pos)
-            if day_bar_dragging:
+            if G.day_bar_dragging:
                 update_day_from_bar(event.pos)
 
             # Priorité : si on est en train de drag la minimap → ignorer le reste
-            if G.APP_STATE == "GAME_SCREEN" and minimap_dragging:
+            if G.APP_STATE == "GAME_SCREEN" and G.minimap_dragging:
                 handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
                 continue
 
             # Panning clic droit
-            if G.APP_STATE == "GAME_SCREEN" and is_panning:
+            if G.APP_STATE == "GAME_SCREEN" and G.is_panning:
                 dx = mouse_pos[0] - last_mouse_pos[0]
                 dy = mouse_pos[1] - last_mouse_pos[1]
                 G.camera_x -= dx
@@ -365,14 +357,14 @@ while running:
         draw_world(screen_width, grid_bottom_y)
 
         # 2. Application du Pinceau (Dessin)
-        if is_drawing:
+        if G.is_drawing:
             mouse_x, mouse_y = pygame.mouse.get_pos()
             if mouse_y < grid_bottom_y:
                 world_x = mouse_x + G.camera_x
                 world_y = mouse_y + G.camera_y
 
-                grid_col = int(world_x // TILE_SIZE)
-                grid_row = int(world_y // TILE_SIZE)
+                grid_col = int(world_x // G.TILE_SIZE)
+                grid_row = int(world_y // G.TILE_SIZE)
 
                 if 0 <= grid_col < G.GRID_WIDTH and 0 <= grid_row < G.GRID_HEIGHT:
                     # compute offsets so that we paint an exact CURRENT_BRUSH x CURRENT_BRUSH square
@@ -385,7 +377,7 @@ while running:
                             c = grid_col + dc
                             if 0 <= r < G.GRID_HEIGHT and 0 <= c < G.GRID_WIDTH:
                                 G.world_grid[r][c] = G.CURRENT_TERRAIN
-        if timer_active:
+        if G.timer_active:
             world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
 
         # 3. Dessiner l'ui
