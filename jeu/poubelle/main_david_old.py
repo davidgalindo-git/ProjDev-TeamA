@@ -68,11 +68,11 @@ try:
     # J'ai rétabli l'usage des COLORS pour la barre d'outils, car TERRAIN_IMAGES_RAW contient des surfaces.
     # L'erreur de draw_toolbar qui attend une couleur sera corrigée plus bas.
     TERRAIN_IMAGES_RAW = {
-        0: pygame.image.load("assets/water.png").convert_alpha(),
-        1: pygame.image.load("assets/grass.png").convert_alpha(),
-        2: pygame.image.load("assets/dirt.png").convert_alpha(),
-        3: pygame.image.load("assets/sand.png").convert_alpha(),
-        4: pygame.image.load("assets/stone.png").convert_alpha(),
+        0: pygame.image.load("../assets/water.png").convert_alpha(),
+        1: pygame.image.load("../assets/grass.png").convert_alpha(),
+        2: pygame.image.load("../assets/dirt.png").convert_alpha(),
+        3: pygame.image.load("../assets/sand.png").convert_alpha(),
+        4: pygame.image.load("../assets/stone.png").convert_alpha(),
     }
     # J'ai retiré les types 4 (stone/dirt) car ils n'étaient pas définis dans le COLORS ni dans TOOLBAR_BUTTONS.
     # Si vous voulez les utiliser, vous devez mettre à jour COLORS et TOOLBAR_BUTTONS.
