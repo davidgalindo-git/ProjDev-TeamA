@@ -1,17 +1,62 @@
 import pygame
 import numpy as np
 
+pygame.init()
+
+
+# Flags
+current_screen_flags = 0
+running = True
+is_drawing = False
+time_bar_dragging = False
+day_bar_dragging = False
+minimap_dragging = False
+timer_active = False
+
 # --- 1. CONFIGURATION STATIQUE ---
-INIT_TILE_SIZE = 16.0
 GRID_WIDTH = 100
 GRID_HEIGHT = 80
 
-TOOLBAR_HEIGHT = 60
 SCROLL_BUTTON_WIDTH = 50
 
 # Dimensions de la fenêtre par défaut
 DEFAULT_WINDOW_WIDTH = 1000
 DEFAULT_WINDOW_HEIGHT = 700
+
+FULLSCREEN_MODE = pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
+
+screen = pygame.display.set_mode((DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT), current_screen_flags)
+screen_width = 0.0
+screen_height = 0.0
+grid_bottom_y = 0.0
+
+# --- ÉTATS DE L'APPLICATION ---
+APP_STATE = "START_SCREEN"
+
+# Variables de l'état du jeu
+INIT_TILE_SIZE = 16.0
+TILE_SIZE = INIT_TILE_SIZE
+camera_x = 0.0
+camera_y = 0.0
+is_panning = False
+last_mouse_pos = (0, 0)
+minimap_dragging = False
+minimap_drag_offset = (0, 0)
+min_tile_size_x = screen_width / GRID_WIDTH
+min_tile_size_y = grid_bottom_y / GRID_HEIGHT
+
+# Variables de défilement de l'ui
+scroll_offset = 0
+BUTTON_GAP = 10
+BUTTON_BASE_WIDTH = 50
+TOOLBAR_HEIGHT = 60
+BUTTON_HEIGHT = TOOLBAR_HEIGHT - BUTTON_GAP
+
+# Fonts
+font = pygame.font.Font(None, 32)
+title_font = pygame.font.Font(None, 48)
+label_font = pygame.font.SysFont("comicsans", 15)
+
 
 # Couleurs pour les types de terrain (MAINTENU UNIQUEMENT POUR L'AFFICHAGE DE L'ui)
 COLORS = {
@@ -22,7 +67,24 @@ COLORS = {
     4: (120, 120, 120)  # Pierre
 }
 
-# --- Brush Sizes ---
+clock = pygame.time.Clock()
+
+# --- Toolbar ---
+TOOLBAR_BUTTONS = [
+    {"type": 0, "label": "Water"},
+    {"type": 1, "label": "Grass"},
+    {"type": 2, "label": "Dirt"},
+    {"type": 3, "label": "Sand"},
+    {"type": 4, "label": "Stone"},
+    {"type": "BRUSH_1", "label": "x1", "brush": 1},
+    {"type": "BRUSH_2", "label": "x2", "brush": 2},
+    {"type": "BRUSH_3", "label": "x4", "brush": 4},
+    {"type": "BRUSH_4", "label": "x8", "brush": 8},
+    {"type": "BRUSH_5", "label": "x16", "brush": 16},
+    {"type": "BRUSH_6", "label": "x32", "brush": 32}
+]
+CURRENT_TERRAIN = TOOLBAR_BUTTONS[0]["type"]
+
 BRUSH_SIZES = [1, 4, 16, 64]
 CURRENT_BRUSH = 1  # default 1x1
 
@@ -30,7 +92,6 @@ TERRAIN_IMAGES_RAW = {}
 TERRAIN_IMAGES = {}
 
 # --- World Time Simulation ---
-timer_active = False
 MAX_DAYS = 1000
 world_minutes = 0
 world_hours = 0
@@ -45,4 +106,5 @@ TIME_BAR_RECT = pygame.Rect(150, 60, 400, 20)  # x, y, width, height
 # Day bar
 DAY_BAR_RECT = pygame.Rect(150, 20, 400, 20)  # x, y, width, height
 
+# --- World Creation ---
 world_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)

@@ -1,76 +1,48 @@
-# Fichier: images.py
+# Fichier : jeu/imageLoader.py (CORRECTION INTÉGRALE)
 
 import pygame
+import sys
+# Utilise les imports ABSOLUS directs pour les constantes (comme dans worldManagement)
+from config_cg import INIT_TILE_SIZE
+
+ASSETS_PATH = "assets/"
 
 
-# Supposons que ces constantes sont importées (ou définies)
-# INIT_TILE_SIZE = 16
+def load_all_assets():
+    """Charge toutes les images brutes. Retourne le dictionnaire des images RAW."""
+    image_files = {
+        0: "water.png", 1: "grass.png", 2: "dirt.png", 3: "sand.png",
+        4: "stone.png", 5: "S_rock1.png", 6: "B_rock.png",
+    }
+    raw_images = {}
+    try:
+        for terrain_id, filename in image_files.items():
+            path = ASSETS_PATH + filename
+            raw_images[terrain_id] = pygame.image.load(path).convert_alpha()
+        return raw_images
+    except pygame.error as e:
+        print(f"Erreur de chargement d'image. Vérifiez le dossier '{ASSETS_PATH}'. Erreur: {e}")
+        sys.exit()
 
-class ImageManager:
-    """Gère le chargement, le stockage et la mise à l'échelle des assets."""
 
-    def __init__(self):
-        self.raw_assets = {}  # Assets bruts chargés (non mis à l'échelle)
-        self.scaled_cache = {}  # Cache des images mises à l'échelle {tile_size: {id: image}}
-        # Définir ici les IDs d'assets (ex: 0=Water, 1=Grass, 5=Rock, etc.)
-        self.ASSET_PATHS = {
-            1: "assets/img/grass.png",
-            5: "assets/img/rock_small.png",
-            # ... autres chemins ...
-        }
+def update_terrain_images(image_cache: dict, raw_images: dict, current_tile_size: float):
+    """
+    Redimensionne toutes les textures pour le zoom actuel et met à jour le cache (image_cache).
+    """
+    if not raw_images:
+        return
 
-        self.load_raw_assets()
+    # Vérification simplifiée de la taille
+    current_size = image_cache.get(0).get_size()[0] if 0 in image_cache else -1
 
-    def load_raw_assets(self):
-        """Charge toutes les images brutes en mémoire."""
-        for id, path in self.ASSET_PATHS.items():
-            try:
-                # Charger l'image avec un alpha (si elle en a un)
-                img = pygame.image.load(path).convert_alpha()
-                self.raw_assets[id] = img
-            except pygame.error as e:
-                print(f"Erreur de chargement de l'image {path}: {e}")
-                self.raw_assets[id] = None  # Utiliser None si le chargement échoue
+    if current_size != int(current_tile_size):
+        new_images = {}
+        target_size = int(current_tile_size)
 
-    def get_scaled_image(self, asset_id, tile_size):
-        """Retourne l'image mise à l'échelle pour la tile_size donnée, en utilisant un cache."""
-        tile_size = int(tile_size)
-
-        if tile_size not in self.scaled_cache:
-            self.scaled_cache[tile_size] = {}
-
-        if asset_id in self.scaled_cache[tile_size]:
-            return self.scaled_cache[tile_size][asset_id]
-
-        raw_img = self.raw_assets.get(asset_id)
-
-        if raw_img:
-            # Mise à l'échelle
-            scaled_img = pygame.transform.scale(raw_img, (tile_size, tile_size)).convert_alpha()
-            self.scaled_cache[tile_size][asset_id] = scaled_img
-            return scaled_img
-
-        return None
-
-    def get_element_ghost_image(self, element_id, tile_size):
-        """Crée et retourne une image fantôme (semi-transparente) pour le placement."""
-        tile_size = int(tile_size)
-
-        if tile_size not in self.scaled_cache:
-            self.scaled_cache[tile_size] = {}
-
-        # Clé spécifique pour l'image fantôme de cet élément à cette taille
-        cache_key = f"GHOST_{element_id}"
-        if cache_key in self.scaled_cache[tile_size]:
-            return self.scaled_cache[tile_size][cache_key]
-
-        # Récupérer l'image normale (mise à l'échelle)
-        normal_img = self.get_scaled_image(element_id, tile_size)
-
-        if normal_img:
-            ghost_img = normal_img.copy()
-            ghost_img.set_alpha(100)  # 100/255 de transparence
-            self.scaled_cache[tile_size][cache_key] = ghost_img
-            return ghost_img
-
-        return None
+        for terrain_type, raw_img in raw_images.items():
+            new_images[terrain_type] = pygame.transform.scale(
+                raw_img, (target_size, target_size)
+            )
+        # Met à jour le cache (TERRAIN_IMAGES)
+        image_cache.clear()
+        image_cache.update(new_images)

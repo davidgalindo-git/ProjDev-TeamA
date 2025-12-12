@@ -1,11 +1,19 @@
 # Fonctions à implémenter
+import globals as G
 # Screen
-screen
-APP_STATE
-camera_x
-camera_y
+#screen
+#APP_STATE
+#camera_x
+#camera_y
 def get_dimensions():
-    pass
+    scr_w, scr_h = G.screen.get_size()
+
+    G.screen_width = float(scr_w)
+    G.screen_height = float(scr_h)
+
+    G.grid_bottom_y = scr_h - G.TOOLBAR_HEIGHT
+
+
 def toggle_fullscreen():
     pass
 def handle_start_screen_click():
@@ -14,20 +22,5 @@ def draw_start_screen():
     pass
 
 # World creation/management
-world_grid
-CURRENT_TERRAIN
 def draw_world():
     pass
-
-# Toolbar
-GRID_WIDTH
-GRID_HEIGHT
-CURRENT_BRUSH
-def handle_toolbar_click():
-    pass
-def draw_toolbar():
-    pass
-
-# Timer
-timer_button
-TIME_BAR_RECT

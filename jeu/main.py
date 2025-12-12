@@ -1,49 +1,21 @@
-# Fichier: main.py
-
 import pygame
 import sys
-import globals as G  # Contient G.screen, G.APP_STATE, G.initial_grid, etc.
+
+import random # A voir si nécessaire
+import math # A voir si nécessaire
+import numpy as np # A voir si nécessaire
+from opensimplex import OpenSimplex # A voir si nécessaire
+
+import globals as G
 from ui.minimap.minimap import draw_minimap, handle_minimap_click, handle_minimap_drag
 from ui.timer.timer import timer, draw_timer, update_time_from_bar, update_day_from_bar, handle_day_bar_click
-from worldManagement import World  # Import corrigé (world_management)
-from imageLoader import ImageManager  # Import corrigé (images)
-from toolbar_cg import ToolbarManager  # Import corrigé (toolbar)
-from draw_world import draw_elements, draw_brush_preview   # NOUVEAU: Pour le rendu du monde
+from ui.toolbar.toolbar import handle_toolbar_click, draw_toolbar
+from todo import get_dimensions
 
-from todo import *  # Assurez-vous que get_dimensions(), toggle_fullscreen(), etc. sont ici
-
-clock = pygame.time.Clock()
-
-# --- INITIALISATION DES CLASSES REFECTORÉES ---
-timer_active = False
-
-# world gère les données, la caméra, et le zoom (remplace TILE_SIZE, G.camera_x, G.world_grid)
-world = World(initial_grid=G.initial_grid)
-# imageManager gère les assets redimensionnés (remplace TERRAIN_IMAGES_RAW/SCALED)
-image_manager = ImageManager()
-
-ui_font = pygame.font.Font(None, 24)
-# toolbar_manager gère l'UI du bas et le choix du pinceau/terrain
-toolbar_manager = ToolbarManager(ui_font)
-
-running = True
-is_drawing = False
-is_panning = False  # Variable manquante dans l'original
-time_bar_dragging = False
-day_bar_dragging = False
-minimap_dragging = False
-last_mouse_pos = (0, 0)  # Pour le panning
-
-while running:
-    # Récupération des dimensions (doit inclure la hauteur de l'écran)
-    screen_width, screen_height, grid_bottom_y = get_dimensions()
-
-    # S'assurer que les bornes de la caméra et du zoom sont respectées
-    world.adjust_camera(screen_width, screen_height)
-
+while G.running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            G.running = False
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F11:
@@ -52,24 +24,24 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
 
-            # ... (Logique Timer et Day Bar inchangée) ...
             if G.timer_button.collidepoint(event.pos):
-                timer_active = not timer_active
+                G.timer_active = not G.timer_active # toggle
 
             if G.TIME_BAR_RECT.collidepoint(event.pos):
-                time_bar_dragging = True
-                timer_active = False
+                G.time_bar_dragging = True
+                G.timer_active = False  # pause time while scrubbing
+                # immediately set time based on click
                 rel_x = (event.pos[0] - G.TIME_BAR_RECT.x) / G.TIME_BAR_RECT.width
-                # world_hours doit être accessible dans G ou initialisé
-                world_hours = rel_x * 24
+                G.world_hours = rel_x * 24
 
             handle_day_bar_click(event.pos)
 
             # --- Priorité : clic sur la minimap ---
             if G.APP_STATE == "GAME_SCREEN":
-                if handle_minimap_click(mouse_pos, screen_width, grid_bottom_y):
-                    is_drawing = False
-                    is_panning = False
+                if handle_minimap_click(mouse_pos, G.screen_width, G.grid_bottom_y):
+                    # On empêche le reste du code de traiter ce clic
+                    G.is_drawing = False
+                    G.is_panning = False
                     continue
 
             if G.APP_STATE == "START_SCREEN":
@@ -77,115 +49,92 @@ while running:
 
             elif G.APP_STATE == "GAME_SCREEN":
                 if event.button == 1:  # Clic Gauche (Dessin/ui)
-                    # DELEGATION AU TOOLBAR MANAGER
-                    if toolbar_manager.handle_click(mouse_pos, screen_width, grid_bottom_y, world):
-                        is_drawing = False  # Le clic a été consommé par la toolbar
-                    elif mouse_pos[1] < grid_bottom_y:
-                        # On est dans la grille, activation du mode dessin/placement
-                        is_drawing = True
-
-                        # LOGIQUE D'ELEMENTS (pour le placement en 1-clic : Rocher/G.Rocher)
-                        if world.current_terrain >= 5:
-                            world_x = mouse_pos[0] + world.camera_x
-                            world_y = mouse_pos[1] + world.camera_y
-                            world.place_element(world_x, world_y)
-                            is_drawing = False  # On ne dessine pas en continu pour les éléments
+                    if handle_toolbar_click(mouse_pos, G.screen_width, G.grid_bottom_y):
+                        G.is_drawing = False
+                    elif mouse_pos[1] < G.grid_bottom_y:
+                        G.is_drawing = True
 
                 elif event.button == 3:  # Clic Droit (Déplacement)
-                    # Clic droit sur l'élément => tenter d'effacer
-                    if world.current_terrain >= 5 and mouse_pos[1] < grid_bottom_y:
-                        world_x = mouse_pos[0] + world.camera_x
-                        world_y = mouse_pos[1] + world.camera_y
-                        world.erase_element(world_x, world_y)
-                    else:
-                        is_panning = True
-                        last_mouse_pos = mouse_pos
+                    G.is_panning = True
+                    last_mouse_pos = mouse_pos
 
                 elif event.button == 4:  # Molette haut (Zoom in)
-                    # DELEGATION AU WORLD MANAGER
-                    world.zoom_in()
+                    TILE_SIZE = min(64.0, TILE_SIZE + 2.0)
 
                 elif event.button == 5:  # Molette bas (Zoom out)
-                    # DELEGATION AU WORLD MANAGER
-                    world.zoom_out()
+                    TILE_SIZE = max(4.0, TILE_SIZE - 2.0)
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
-                is_drawing = False
-                # is_dragging = False # Variable non définie
-                time_bar_dragging = False
-                day_bar_dragging = False
-                minimap_dragging = False
+                G.is_drawing = False
+                G.is_dragging = False
+                G.time_bar_dragging = False
+                G.day_bar_dragging = False
+                G.minimap_dragging = False
             elif event.button == 3:
-                is_panning = False
+                G.is_panning = False
 
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
-            if time_bar_dragging:
+            if G.time_bar_dragging:
                 update_time_from_bar(event.pos)
-            if day_bar_dragging:
+            if G.day_bar_dragging:
                 update_day_from_bar(event.pos)
 
             # Priorité : si on est en train de drag la minimap → ignorer le reste
-            if G.APP_STATE == "GAME_SCREEN" and minimap_dragging:
-                handle_minimap_drag(mouse_pos, screen_width, grid_bottom_y)
+            if G.APP_STATE == "GAME_SCREEN" and G.minimap_dragging:
+                handle_minimap_drag(mouse_pos, G.screen_width, G.grid_bottom_y)
                 continue
 
             # Panning clic droit
-            if G.APP_STATE == "GAME_SCREEN" and is_panning:
+            if G.APP_STATE == "GAME_SCREEN" and G.is_panning:
                 dx = mouse_pos[0] - last_mouse_pos[0]
                 dy = mouse_pos[1] - last_mouse_pos[1]
-                # DELEGATION AU WORLD MANAGER
-                world.pan(dx, dy)
+                G.camera_x -= dx
+                G.camera_y -= dy
                 last_mouse_pos = mouse_pos
 
     # --- LOGIQUE D'AFFICHAGE ---
     G.screen.fill((0, 0, 0))
 
     if G.APP_STATE == "START_SCREEN":
-        draw_start_screen(screen_width, screen_height)
+        draw_start_screen(G.screen_width, G.screen_height)
 
     elif G.APP_STATE == "GAME_SCREEN":
-        # 1. Dessiner le monde et démarrer timer
-        # DELEGATION AU RENDERER
-        draw_world(G.screen, world, image_manager)
-        draw_elements(G.screen, world, image_manager, screen_width, screen_height)
+        # 1. Dessiner le monde (maintenant avec des images) et démarrer timer
+        draw_world(G.screen_width, G.grid_bottom_y)
 
-        # 2. Application du Pinceau (Dessin de Terrain continu)
-        if is_drawing and world.current_terrain <= 4:  # Terrain seulement (ID < 5)
+        # 2. Application du Pinceau (Dessin)
+        if G.is_drawing:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            if mouse_y < grid_bottom_y:
-                world_x = mouse_x + world.camera_x
-                world_y = mouse_y + world.camera_y
-                # DELEGATION AU WORLD MANAGER
-                world.paint_terrain(world_x, world_y)
+            if mouse_y < G.grid_bottom_y:
+                world_x = mouse_x + G.camera_x
+                world_y = mouse_y + G.camera_y
 
-        if timer_active:
-            # world_hours, world_days doivent être initialisés ou gérés globalement
-            world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
+                grid_col = int(world_x // TILE_SIZE)
+                grid_row = int(world_y // TILE_SIZE)
+
+                if 0 <= grid_col < G.GRID_WIDTH and 0 <= grid_row < G.GRID_HEIGHT:
+                    # compute offsets so that we paint an exact CURRENT_BRUSH x CURRENT_BRUSH square
+                    N = int(G.CURRENT_BRUSH)
+                    start_offset = -(N // 2)
+                    # For even sizes this centers slightly up-left which is expected; you can change anchor if you want top-left.
+                    for dr in range(start_offset, start_offset + N):
+                        for dc in range(start_offset, start_offset + N):
+                            r = grid_row + dr
+                            c = grid_col + dc
+                            if 0 <= r < G.GRID_HEIGHT and 0 <= c < G.GRID_WIDTH:
+                                G.world_grid[r][c] = G.CURRENT_TERRAIN
+        if G.timer_active:
+            G.world_hours, G.world_days, G.display_hours, G.world_minutes = timer(G.world_hours, G.world_days)
 
         # 3. Dessiner l'ui
-        # DELEGATION AU TOOLBAR MANAGER
-        toolbar_manager.draw_toolbar(G.screen, world, screen_width, grid_bottom_y)
-
-        # Dessiner l'aperçu du pinceau (Ghost image)
-        if mouse_pos[1] < grid_bottom_y:
-            mouse_x, mouse_y = pygame.mouse.get_pos()
-
-            # Pour le Terrain (pinceau carré)
-            if world.current_terrain <= 4:
-                draw_brush_preview(G.screen, world, mouse_x, mouse_y, grid_bottom_y)
-
-            # Pour les Éléments (aperçu 1x1 ou 4x4) - À IMPLEMENTER
-
-        draw_minimap(screen_width, grid_bottom_y)
-        draw_timer(world_days)
+        draw_toolbar(G.screen_width, G.grid_bottom_y)
+        draw_minimap(G.screen_width, G.grid_bottom_y)
+        draw_timer(G.world_days)
 
     pygame.display.flip()
-    clock.tick(60)
+    G.clock.tick(60)
 
 pygame.quit()
 sys.exit()
-
-# Note : Les fichiers 'world_management.py', 'images.py', et 'toolbar.py' sont considérés 
-# comme corrects d'après la révision précédente.
