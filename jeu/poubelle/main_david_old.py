@@ -5,6 +5,7 @@ import math
 import numpy as np
 from opensimplex import OpenSimplex
 from assets import *
+from jeu.world.load_manager import LoadManager
 from jeu.world.save_manager import SaveManager
 
 # --- 1. CONFIGURATION STATIQUE ---
@@ -656,16 +657,31 @@ def draw_start_screen(screen_width, screen_height):
     text2_rect = text2.get_rect(center=btn2_rect.center)
     screen.blit(text2, text2_rect)
 
+    btn3_rect = pygame.Rect(center_x - button_w / 2, screen_height / 2 + 130, button_w, button_h)
+    pygame.draw.rect(screen, (50, 50, 150), btn3_rect, border_radius=10)
+    text3 = font.render("Reprendre un monde", True, (255, 255, 255))
+    screen.blit(text3, text3.get_rect(center=btn3_rect.center))
+    load_manager.draw(screen)
+
     global START_BUTTONS
     START_BUTTONS = [
         {"rect": btn1_rect, "action": "NEW"},
-        {"rect": btn2_rect, "action": "RANDOM"}
+        {"rect": btn2_rect, "action": "RANDOM"},
+        {"rect": btn3_rect, "action": "LOAD_MENU"},
     ]
 
 
 def handle_start_screen_click(mouse_pos):
     global APP_STATE, world_grid
+    # 1. If menu is already open, let it handle the click first
+    if load_manager.active:
+        result = load_manager.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=mouse_pos))
+        if result == "LOAD_SUCCESS":
+            world_grid = load_manager.selected_world_data
+            APP_STATE = "GAME_SCREEN"
+        return True  # Menu is active, so we "consume" the click
 
+    # 2. Otherwise, check start screen buttons
     for btn in START_BUTTONS:
         if btn["rect"].collidepoint(mouse_pos):
             if btn["action"] == "NEW":
@@ -675,6 +691,8 @@ def handle_start_screen_click(mouse_pos):
             elif btn["action"] == "RANDOM":
                 generate_random_world()
                 APP_STATE = "GAME_SCREEN"
+            elif btn["action"] == "LOAD_MENU":
+                load_manager.open_menu()
             return True
     return False
 
@@ -687,12 +705,22 @@ time_bar_dragging = False
 day_bar_dragging = False
 minimap_dragging = False
 save_manager = SaveManager(label_font)
+load_manager = LoadManager(font)
 while running:
     screen_width, screen_height, grid_bottom_y = get_dimensions()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+        # --- LOAD MENU INTERCEPTION ---
+        if APP_STATE == "START_SCREEN" and load_manager.active:
+            # Handle keys (like ESC to close)
+            result = load_manager.handle_event(event)
+            if result == "LOAD_SUCCESS":
+                world_grid = load_manager.selected_world_data
+                APP_STATE = "GAME_SCREEN"
+            continue  # This prevents handle_start_screen_click from running
 
         if APP_STATE == "GAME_SCREEN":
             if save_manager.handle_event(event, world_grid):
