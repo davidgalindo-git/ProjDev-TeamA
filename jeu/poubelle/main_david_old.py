@@ -5,6 +5,7 @@ import math
 import numpy as np
 from opensimplex import OpenSimplex
 from assets import *
+from jeu.world.save_manager import SaveManager
 
 # --- 1. CONFIGURATION STATIQUE ---
 INIT_TILE_SIZE = 16.0
@@ -685,7 +686,7 @@ is_drawing = False
 time_bar_dragging = False
 day_bar_dragging = False
 minimap_dragging = False
-
+save_manager = SaveManager(label_font)
 while running:
     screen_width, screen_height, grid_bottom_y = get_dimensions()
 
@@ -693,7 +694,11 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-        elif event.type == pygame.KEYDOWN:
+        if APP_STATE == "GAME_SCREEN":
+            if save_manager.handle_event(event, world_grid):
+                continue
+
+        if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F11:
                 toggle_fullscreen()
 
@@ -808,6 +813,7 @@ while running:
         draw_toolbar(screen_width, grid_bottom_y)
         draw_minimap(screen_width, grid_bottom_y)
         draw_timer(world_days)
+        save_manager.draw(screen)
 
     pygame.display.flip()
     clock.tick(60)
