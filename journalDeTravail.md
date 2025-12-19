@@ -10,7 +10,7 @@
 ### Mouldi : amélioration de texture
 ### David : minimap, update de la toolbar et ajout des différentes tailles de pinceau
 ### Pang : IceScrum, tester les stories dans la sprint 1, finaliser le print 1 et démarrer le sprint 2
-### Ahmet : README , refleching refactor
+### Ahmet : README , début refactor
 
 # 28.11.2025
 ### Mouldi : Gestion toolbar et images
