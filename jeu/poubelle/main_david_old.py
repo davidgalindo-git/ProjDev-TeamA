@@ -5,6 +5,7 @@ import math
 import numpy as np
 from opensimplex import OpenSimplex
 from assets import *
+from jeu.world.evolution_manager import EvolutionManager
 from jeu.world.load_manager import LoadManager
 from jeu.world.save_manager import SaveManager
 
@@ -38,13 +39,13 @@ TERRAIN_IMAGES = {}
 
 # --- World Time Simulation ---
 timer_active = False
-MAX_DAYS = 1000
+MAX_DAYS = 20
 world_minutes = 0
 world_hours = 0
 world_days = 0
 display_hours = 0
-# 1 real second = 1 game hour
-GAME_HOURS_PER_SECOND = 1
+# 1 real second = 10 game minutes
+GAME_HOURS_PER_SECOND = 0.166
 # buttons
 timer_button = pygame.Rect(20, 20, 120, 40)
 # Time bar
@@ -235,7 +236,6 @@ def generate_random_world():
                     final_grid[r, c] = 3
 
     world_grid = final_grid.tolist()
-
 
 # --- 4. FONCTIONS ui ET AFFICHAGE ---
 def timer(world_hours, world_days):
@@ -690,6 +690,9 @@ def handle_start_screen_click(mouse_pos):
 
             elif btn["action"] == "RANDOM":
                 generate_random_world()
+                # In handle_start_screen_click or generate_random_world
+                evo_manager.snapshots = {0: np.copy(world_grid)}
+                evo_manager.last_simulated_minute = 0
                 APP_STATE = "GAME_SCREEN"
             elif btn["action"] == "LOAD_MENU":
                 load_manager.open_menu()
@@ -706,6 +709,7 @@ day_bar_dragging = False
 minimap_dragging = False
 save_manager = SaveManager(label_font)
 load_manager = LoadManager(font)
+evo_manager = EvolutionManager()
 while running:
     screen_width, screen_height, grid_bottom_y = get_dimensions()
 
@@ -783,12 +787,27 @@ while running:
             elif event.button == 3:
                 is_panning = False
 
+
+
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
             if time_bar_dragging:
-                update_time_from_bar(event.pos)
+                update_time_from_bar(mouse_pos)
+                # Force update during scrubbing
+                new_grid = evo_manager.update_world_to_current_time(
+                    world_grid, world_days, world_hours, world_minutes
+                )
+                if new_grid is not None:
+                    world_grid = new_grid
+
             if day_bar_dragging:
-                update_day_from_bar(event.pos)
+                update_day_from_bar(mouse_pos)
+                # Force update during scrubbing
+                new_grid = evo_manager.update_world_to_current_time(
+                    world_grid, world_days, world_hours, world_minutes
+                )
+                if new_grid is not None:
+                    world_grid = new_grid
 
             # Priorité : si on est en train de drag la minimap → ignorer le reste
             if APP_STATE == "GAME_SCREEN" and minimap_dragging:
@@ -836,6 +855,14 @@ while running:
                                 world_grid[r][c] = CURRENT_TERRAIN
         if timer_active:
             world_hours, world_days, display_hours, world_minutes = timer(world_hours, world_days)
+            # --- FIX: Only evolve if the minute has actually moved ---
+            current_total_min = evo_manager.get_total_minutes(world_days, world_hours, world_minutes)
+            if current_total_min != evo_manager.last_simulated_minute:
+                new_grid = evo_manager.update_world_to_current_time(
+                    world_grid, world_days, world_hours, world_minutes
+                )
+                if new_grid is not None:
+                    world_grid = new_grid
 
         # 3. Dessiner l'ui
         draw_toolbar(screen_width, grid_bottom_y)
