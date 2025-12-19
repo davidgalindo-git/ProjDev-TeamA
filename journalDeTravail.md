@@ -13,11 +13,26 @@
 ### Ahmet : README , refleching refactor
 
 # 28.11.2025
-
+### Mouldi : Gestion toolbar et images
+### David : début timer
 ### Ahmet: refactor code
 ### Pang : IceScrum
 
 # 05.12.2025
-
+### Mouldi : Dessins nature
+### David : timer complet et dessin arbuste
 ### Pang : IceScrum, améliorer interface du jeux
 ### Ahmet : malade
+
+# 12.12.2025
+### (refactor tous ensemble)
+### David : refactor
+### Ahmet : refactor
+### Mouldi : refactor 
+### Pang : refactor
+
+# 19.12.2025
+### Mouldi : refactor 2 (recréation d'un nouveau système de fichiers fonctionnelle)
+### Ahmet : documentation et présentation
+### Pang : malade
+### David : système de sauvegarde et chargement, init de l'évolution du monde
