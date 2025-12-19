@@ -1,4 +1,4 @@
-# Fichier : jeu/main_Mouldi.py (CORRECTION INTÉGRALE)
+# Fichier : jeu_version_ancienne/main_Mouldi.py (CORRECTION INTÉGRALE)
 
 import pygame
 import sys
@@ -52,7 +52,7 @@ screen = pygame.display.set_mode((DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT), 
 # --- 3. Fonctions Utilitaires et Écran de Démarrage (Inchagées) ---
 
 def get_dimensions():
-    """Retourne la largeur, hauteur et la limite Y de la grille de jeu."""
+    """Retourne la largeur, hauteur et la limite Y de la grille de jeu_version_ancienne."""
     scr_w, scr_h = screen.get_size()
     grid_bottom_y = scr_h - TOOLBAR_HEIGHT
     return float(scr_w), float(scr_h), float(grid_bottom_y)
@@ -129,7 +129,7 @@ def handle_start_screen_click(mouse_pos):
 # --- 4. Boucle de Jeu Principale ---
 
 def run_game_loop():
-    """Contient la boucle principale du jeu Pygame."""
+    """Contient la boucle principale du jeu_version_ancienne Pygame."""
     global running, APP_STATE, is_panning, last_mouse_pos, is_drawing, minimap_dragging, scroll_offset
 
     running = True
@@ -153,7 +153,7 @@ def run_game_loop():
                     handle_start_screen_click(mouse_pos)
                     continue
 
-                # --- Dans l'écran de jeu ---
+                # --- Dans l'écran de jeu_version_ancienne ---
                 if APP_STATE == "GAME_SCREEN":
 
                     # 1. Priorité : Minimap

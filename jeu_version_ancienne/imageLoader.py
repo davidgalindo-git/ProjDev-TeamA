@@ -1,4 +1,4 @@
-# Fichier : jeu/imageLoader.py (CORRECTION INTÉGRALE)
+# Fichier : jeu_version_ancienne/imageLoader.py (CORRECTION INTÉGRALE)
 
 import pygame
 import sys

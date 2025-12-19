@@ -37,7 +37,7 @@ button_w = 300
 button_h = 60
 START_BUTTONS = []
 
-# Variables de l'état du jeu
+# Variables de l'état du jeu_version_ancienne
 INIT_TILE_SIZE = 16.0
 TILE_SIZE = INIT_TILE_SIZE
 camera_x = 0.0

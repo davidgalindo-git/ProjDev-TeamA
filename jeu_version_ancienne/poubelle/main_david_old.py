@@ -108,7 +108,7 @@ CURRENT_TERRAIN = TOOLBAR_BUTTONS[0]["type"]
 # --- ÉTATS DE L'APPLICATION ---
 APP_STATE = "START_SCREEN"
 
-# Variables de l'état du jeu
+# Variables de l'état du jeu_version_ancienne
 TILE_SIZE = INIT_TILE_SIZE
 camera_x = 0.0
 camera_y = 0.0
