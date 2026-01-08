@@ -7,10 +7,13 @@ from ui import draw_toolbar, get_toolbar_click
 from minimap import draw_minimap, is_minimap_clicked, update_camera_from_minimap
 from timer import update_timer, draw_timer_ui, handle_timer_logic
 from save_system import SaveLoadSystem
+from assets import AssetManager
+
+# On initialise le gestionnaire d'assets globalement
 
 
 def menu(screen, sl_system):
-    """Menu principal avec option de chargement."""
+    # ... (Le code du menu reste identique jusqu'au retour du world) ...
     font = pygame.font.SysFont("Arial", 32, bold=True)
     btn_vide = pygame.Rect(cfg.DEFAULT_WINDOW_WIDTH // 2 - 150, 250, 300, 50)
     btn_aleat = pygame.Rect(cfg.DEFAULT_WINDOW_WIDTH // 2 - 150, 330, 300, 50)
@@ -19,47 +22,37 @@ def menu(screen, sl_system):
     world = None
     while world is None:
         screen.fill((30, 30, 35))
-
-        # Dessin des boutons
         for btn, txt in zip([btn_vide, btn_aleat, btn_load], ["VIDE", "ALÉATOIRE", "CHARGER SAVE"]):
             pygame.draw.rect(screen, (80, 80, 80), btn, border_radius=10)
             surf = font.render(txt, True, (255, 255, 255))
             screen.blit(surf, surf.get_rect(center=btn.center))
-
-        # Si le menu de chargement est ouvert, on le dessine par-dessus
         sl_system.draw(screen)
         pygame.display.flip()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT: pygame.quit(); sys.exit()
-
-            # Gestion du menu de chargement
             if sl_system.load_menu_active:
                 res = sl_system.handle_event(event, None)
-                if res == "LOAD_SUCCESS":  # C'est ICI que le jeu se lance
+                if res == "LOAD_SUCCESS":
                     world = World(mode="vide")
                     sl_system.apply_to_world(world)
                 continue
-
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if btn_vide.collidepoint(event.pos): world = World(mode="vide")
                 if btn_aleat.collidepoint(event.pos): world = World(mode="aleatoire")
                 if btn_load.collidepoint(event.pos): sl_system.open_load_menu()
-
     return world
 
 
 def main():
     pygame.init()
+    am = AssetManager()
     screen = pygame.display.set_mode((cfg.DEFAULT_WINDOW_WIDTH, cfg.DEFAULT_WINDOW_HEIGHT))
     pygame.display.set_caption("Sandbox World Creator")
     clock = pygame.time.Clock()
     font_ui = pygame.font.SysFont("Arial", 18, bold=True)
 
-    # Initialisation du système de sauvegarde avant le menu
     sl_system = SaveLoadSystem(font_ui)
-
-    # Lancement du menu
     world = menu(screen, sl_system)
 
     selected_terrain = 1
@@ -70,7 +63,6 @@ def main():
     last_mouse_pos = (0, 0)
 
     while True:
-        # 1. TEMPS
         dt = clock.tick(60) / 1000.0
         update_timer(dt)
 
@@ -78,7 +70,6 @@ def main():
         limit_y = scr_h - cfg.TOOLBAR_HEIGHT
         min_tile_size = max(scr_w / cfg.GRID_WIDTH, limit_y / cfg.GRID_HEIGHT)
 
-        # 2. ÉVÉNEMENTS
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit();
@@ -86,12 +77,10 @@ def main():
 
             m_pos = getattr(event, 'pos', None)
 
-            # PRIORITÉ 0 : Sauvegarde / Chargement
             if sl_system.handle_event(event, world):
                 is_painting = False
                 continue
 
-            # PRIORITÉ 1 : Timer (Scrubbing)
             if m_pos and handle_timer_logic(m_pos, is_click=(event.type == pygame.MOUSEBUTTONDOWN)):
                 is_painting = False
 
@@ -121,7 +110,10 @@ def main():
                 cfg.time_bar_dragging = False
 
             elif event.type == pygame.MOUSEWHEEL:
+                # LOGIQUE CRUE : On change la taille ET on vide le cache
+                # Sinon la RAM va exploser avec des milliers d'images de tailles différentes
                 world.tile_size = max(min_tile_size, min(128, world.tile_size + event.y * 4))
+                am.cache.clear()
 
             elif event.type == pygame.MOUSEMOTION:
                 if is_dragging_minimap:
@@ -134,10 +126,8 @@ def main():
                     world.camera_y -= dy
                     last_mouse_pos = event.pos
 
-        # 3. LOGIQUE DE PEINTURE (BOUCLIER UI)
+        # LOGIQUE DE PEINTURE
         mx, my = pygame.mouse.get_pos()
-
-        # On définit ce qui bloque la peinture
         ui_hover = (
                 is_minimap_clicked((mx, my)) or
                 cfg.timer_button.collidepoint(mx, my) or
@@ -156,13 +146,16 @@ def main():
                     if 0 <= r < cfg.GRID_HEIGHT and 0 <= c < cfg.GRID_WIDTH:
                         world.grid[r][c] = selected_terrain
 
-        # 4. CAMÉRA CLAMPING
+        # CAMÉRA CLAMPING
         world.camera_x = max(0, min(world.camera_x, cfg.GRID_WIDTH * world.tile_size - scr_w))
         world.camera_y = max(0, min(world.camera_y, cfg.GRID_HEIGHT * world.tile_size - limit_y))
 
-        # 5. RENDU
+        # 5. RENDU (C'est ici que la magie opère)
         screen.fill((0, 0, 0))
-        draw_world(screen, world)
+
+        # On passe 'am' à draw_world pour qu'il puisse dessiner les textures animées
+        draw_world(screen, world, am)
+
         draw_toolbar(screen, selected_terrain, brush_size)
         draw_timer_ui(screen, font_ui)
         draw_minimap(screen, world, COULEURS)
