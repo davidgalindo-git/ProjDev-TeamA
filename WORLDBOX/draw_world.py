@@ -13,20 +13,25 @@ COULEURS = {
 }
 
 
-def draw_world(screen, world):
+def draw_world(screen, world, asset_manager):
+    frame_index = int(pygame.time.get_ticks() / 300) % 3
     # Culling : on ne dessine que ce qui est sur l'écran
     start_c = max(0, int(world.camera_x // world.tile_size))
     start_r = max(0, int(world.camera_y // world.tile_size))
-
     end_c = min(GRID_WIDTH, start_c + int(screen.get_width() // world.tile_size) + 2)
     end_r = min(GRID_HEIGHT, start_r + int(screen.get_height() // world.tile_size) + 2)
 
     for r in range(start_r, end_r):
         for c in range(start_c, end_c):
             tid = world.grid[r][c]
-            color = COULEURS.get(tid, (0, 0, 0))
 
             x = c * world.tile_size - world.camera_x
             y = r * world.tile_size - world.camera_y
 
-            pygame.draw.rect(screen, color, (x, y, int(world.tile_size) + 1, int(world.tile_size) + 1))
+            # --- LE CHANGEMENT EST ICI ---
+            # 1. On récupère l'image correspondante au terrain (tid) et à la taille du zoom
+            img = asset_manager.get_texture(tid, world.tile_size, frame_index)
+
+            if img:
+                # 2. On "colle" l'image sur l'écran au lieu de dessiner un rect
+                screen.blit(img, (x, y))

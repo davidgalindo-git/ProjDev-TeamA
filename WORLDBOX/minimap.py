@@ -13,9 +13,12 @@ def draw_minimap(screen, world, colors):
     mini_surf = pygame.Surface((GRID_WIDTH, GRID_HEIGHT))
     for r in range(GRID_HEIGHT):
         for c in range(GRID_WIDTH):
+            # Parcourt chaque cellule du monde (world.grid) et
+            # dessine un point de la couleur correspondante
             color = colors.get(world.grid[r][c], (0, 0, 0))
             mini_surf.set_at((c, r), color)
 
+    # Agrandissement à la taille de la minimap
     scaled = pygame.transform.scale(mini_surf, (MINIMAP_SIZE, MINIMAP_SIZE))
     screen.blit(scaled, MINIMAP_POS)
 

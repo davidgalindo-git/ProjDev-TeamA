@@ -3,35 +3,38 @@ import config as cfg
 
 
 def update_timer(dt):
-    """Update world time based on delta time (dt en secondes)."""
+    """Si le jeu est en pause, le timer s'arrête immédiatement."""
     if not cfg.timer_active:
         return
 
+    # dt est le temps delta réél écoulé en secondes.
     cfg.world_hours += dt * cfg.GAME_HOURS_PER_SECOND
 
+    # Gestion du compteur de jours (24h -> +1 jour)
     while cfg.world_hours >= 24:
         cfg.world_hours -= 24
         cfg.world_days += 1
 
+    # Calcul des minutes en fonction de la partie décimale des heures
     cfg.world_minutes = int((cfg.world_hours % 1) * 60)
 
 
 def draw_timer_ui(screen, font):
-    # 1. Day Bar
+    # 1. Barre des jours
     pygame.draw.rect(screen, (100, 100, 100), cfg.DAY_BAR_RECT, border_radius=5)
     day_frac = cfg.world_days / cfg.MAX_DAYS
     pygame.draw.rect(screen, (50, 200, 50),
                      (cfg.DAY_BAR_RECT.x, cfg.DAY_BAR_RECT.y, int(cfg.DAY_BAR_RECT.width * day_frac),
                       cfg.DAY_BAR_RECT.height), border_radius=5)
 
-    # 2. Time Bar
+    # 2. Barre de l'heure:minute
     pygame.draw.rect(screen, (100, 100, 100), cfg.TIME_BAR_RECT, border_radius=5)
     time_frac = cfg.world_hours / 24.0
     pygame.draw.rect(screen, (50, 200, 50),
                      (cfg.TIME_BAR_RECT.x, cfg.TIME_BAR_RECT.y, int(cfg.TIME_BAR_RECT.width * time_frac),
                       cfg.TIME_BAR_RECT.height), border_radius=5)
 
-    # 3. Handles (Curseurs rouges)
+    # 3. Curseurs rouges
     pygame.draw.rect(screen, (255, 0, 0),
                      (cfg.DAY_BAR_RECT.x + int(cfg.DAY_BAR_RECT.width * day_frac) - 3, cfg.DAY_BAR_RECT.y - 2, 6,
                       cfg.DAY_BAR_RECT.height + 4))
@@ -42,7 +45,7 @@ def draw_timer_ui(screen, font):
     # 4. Bouton PLAY/STOP
     btn_color = (200, 50, 50) if cfg.timer_active else (50, 200, 50)
     pygame.draw.rect(screen, btn_color, cfg.timer_button, border_radius=5)
-    label = "STOP" if cfg.timer_active else "PLAY"
+    label = "STOP" if cfg.timer_active else "PLAY"  # Affiche le contraire de ce qui se passe (Pause affiche PLAY)
     txt = font.render(label, True, (255, 255, 255))
     screen.blit(txt, (cfg.timer_button.x + 35, cfg.timer_button.y + 10))
 
@@ -58,6 +61,23 @@ def handle_timer_logic(mouse_pos, is_click=False):
     if is_click and cfg.timer_button.collidepoint(mouse_pos):
         cfg.timer_active = not cfg.timer_active
         return True
+
+    # CALCULS
+    # Calcule la position relative de la souris par rapport au début de la barre,
+    # puis transforme ce ratio en nombre de jours ou d'heures.
+
+    # Début de la barre (cfg.TIME_BAR_RECT.x)
+    #        |
+    #        |          Position Souris (mouse_pos[0])
+    #        |          |
+    #        V          V
+    #        [==========X--------------------]  <-- Barre de 200 pixels (width)
+    #        |<-------->|
+    #         Distance (d) = 80 pixels
+    # Ratio : R = 80/200 = 0,4
+    # Temps : MAX * R = T
+    # HH:MM : 24 * 0,4 = 9,6 = 9h36m
+    # Jours : 100 * 0,4 = 40 jours
 
     # 2. Gestion de la barre des JOURS
     if cfg.DAY_BAR_RECT.collidepoint(mouse_pos):
