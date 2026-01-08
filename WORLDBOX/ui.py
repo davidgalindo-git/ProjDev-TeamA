@@ -5,7 +5,9 @@ BUTTONS = [
     {"id": 0, "label": "Eau", "color": (52, 152, 219)},
     {"id": 1, "label": "Herbe", "color": (46, 204, 113)},
     {"id": 2, "label": "Terre", "color": (211, 84, 0)},
-    {"id": 3, "label": "Sable", "color": (241, 196, 15)}
+    {"id": 3, "label": "Sable", "color": (241, 196, 15)},
+    {"id": 5, "label": "Arbre", "color": (34, 139, 34)},
+    {"id": 4, "label": "Rocher", "color": (100, 100, 100)}
 ]
 
 # Nouvelles tailles demandées

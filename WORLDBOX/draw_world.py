@@ -1,5 +1,6 @@
 import pygame
 from config import *
+import time
 
 COULEURS = {
     0: (0, 0, 200),  # Eau
@@ -14,24 +15,43 @@ COULEURS = {
 
 
 def draw_world(screen, world, asset_manager):
-    frame_index = int(pygame.time.get_ticks() / 300) % 3
-    # Culling : on ne dessine que ce qui est sur l'écran
+    import time
+    frame_index = int(time.time() * 3) % 3
+
     start_c = max(0, int(world.camera_x // world.tile_size))
     start_r = max(0, int(world.camera_y // world.tile_size))
     end_c = min(GRID_WIDTH, start_c + int(screen.get_width() // world.tile_size) + 2)
     end_r = min(GRID_HEIGHT, start_r + int(screen.get_height() // world.tile_size) + 2)
 
+    # 1. Dessiner le SOL
     for r in range(start_r, end_r):
         for c in range(start_c, end_c):
             tid = world.grid[r][c]
+            x = c * world.tile_size - world.camera_x
+            y = r * world.tile_size - world.camera_y
+            size = int(world.tile_size) + 1
+
+            # Si c'est un rocher(4) ou arbre(5), on met de l'herbe(1) dessous
+            sol_id = 1 if tid in [4, 5] else tid
+            img = asset_manager.get_texture(sol_id, size, frame_index)
+            if img: screen.blit(img, (x, y))
+
+    # 2. Dessiner les OBJETS
+    for r in range(start_r, end_r):
+        for c in range(start_c, end_c):
+            tid = world.grid[r][c]
+            if tid not in [4, 5]: continue
 
             x = c * world.tile_size - world.camera_x
             y = r * world.tile_size - world.camera_y
+            size = int(world.tile_size) + 1
 
-            # --- LE CHANGEMENT EST ICI ---
-            # 1. On récupère l'image correspondante au terrain (tid) et à la taille du zoom
-            img = asset_manager.get_texture(tid, world.tile_size, frame_index)
-
+            img = asset_manager.get_texture(tid, size, frame_index)
             if img:
-                # 2. On "colle" l'image sur l'écran au lieu de dessiner un rect
-                screen.blit(img, (x, y))
+                if tid == 5: # Arbre
+                    # Décalage : centré sur X, posé sur le bas du bloc sur Y
+                    dx = x - (img.get_width() - size) // 2
+                    dy = y - (img.get_height() - size)
+                    screen.blit(img, (dx, dy))
+                else: # Rocher
+                    screen.blit(img, (x, y))
