@@ -7,6 +7,7 @@ from ui import draw_toolbar, get_toolbar_click
 from minimap import draw_minimap, is_minimap_clicked, update_camera_from_minimap
 from timer import update_timer, draw_timer_ui, handle_timer_logic
 from save_system import SaveLoadSystem
+from entity import NPC
 
 
 def menu(screen, sl_system):
@@ -68,6 +69,7 @@ def main():
     is_panning = False
     is_dragging_minimap = False
     last_mouse_pos = (0, 0)
+    character = NPC(50, 40)
 
     while True:
         # 1. TEMPS
