@@ -33,6 +33,7 @@ def draw_minimap(screen, world, colors):
 
 
 def is_minimap_clicked(mouse_pos):
+    # Détection de collision (mouse et minimap)
     mx, my = mouse_pos
     return (MINIMAP_POS[0] <= mx <= MINIMAP_POS[0] + MINIMAP_SIZE and
             MINIMAP_POS[1] <= my <= MINIMAP_POS[1] + MINIMAP_SIZE)
@@ -44,8 +45,12 @@ def update_camera_from_minimap(mouse_pos, world, screen_w, screen_h):
     mx = max(MINIMAP_POS[0], min(mx, MINIMAP_POS[0] + MINIMAP_SIZE))
     my = max(MINIMAP_POS[1], min(my, MINIMAP_POS[1] + MINIMAP_SIZE))
 
+    # Coordonnées relatives (proportion dans la minimap)
     rel_x = (mx - MINIMAP_POS[0]) / MINIMAP_SIZE
     rel_y = (my - MINIMAP_POS[1]) / MINIMAP_SIZE
 
+    # Repositionnement avec les dimensions ddu monde
+    # Grid : Nb de tuiles; Tile_size: Taille par tuile en pixels
+    # (Soustraire la moitié de la taille de l'écran pour cadrer au centre)
     world.camera_x = rel_x * (GRID_WIDTH * world.tile_size) - (screen_w / 2)
     world.camera_y = rel_y * (GRID_HEIGHT * world.tile_size) - ((screen_h - TOOLBAR_HEIGHT) / 2)
