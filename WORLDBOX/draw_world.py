@@ -20,6 +20,7 @@ def draw_world(screen, world, asset_manager):
 
     start_c = max(0, int(world.camera_x // world.tile_size))
     start_r = max(0, int(world.camera_y // world.tile_size))
+    #culling => évite de calculer ce qui est en dehors de l'écran
     end_c = min(GRID_WIDTH, start_c + int(screen.get_width() // world.tile_size) + 2)
     end_r = min(GRID_HEIGHT, start_r + int(screen.get_height() // world.tile_size) + 2)
 
@@ -41,6 +42,7 @@ def draw_world(screen, world, asset_manager):
         for c in range(start_c, end_c):
             tid = world.grid[r][c]
             if tid not in [4, 5]: continue
+            #une fois le  sol dessiné, il passera a l objet
 
             x = c * world.tile_size - world.camera_x
             y = r * world.tile_size - world.camera_y
@@ -49,7 +51,7 @@ def draw_world(screen, world, asset_manager):
             img = asset_manager.get_texture(tid, size, frame_index)
             if img:
                 if tid == 5: # Arbre
-                    # Décalage : centré sur X, posé sur le bas du bloc sur Y
+                    # éviter le décalage de l'arbre
                     dx = x - (img.get_width() - size) // 2
                     dy = y - (img.get_height() - size)
                     screen.blit(img, (dx, dy))
