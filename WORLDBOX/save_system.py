@@ -60,17 +60,19 @@ class SaveLoadSystem:
     def handle_event(self, event, world):
         # Menu chargement actif
         if self.load_menu_active:
+            # Escape ferme le menu
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self.load_menu_active = False
                 return True
 
+            # Gestion du clic pour le chargement du monde (clic sur un nom)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 for i, name in enumerate(self.files):
                     file_rect = pygame.Rect(self.overlay_rect.x + 20, self.overlay_rect.y + 70 + (i * 45), 360, 40)
                     if file_rect.collidepoint(event.pos):
                         self.load_world_data(name)
                         self.load_menu_active = False
-                        return "LOAD_SUCCESS"  # Crucial pour le main.py
+                        return "LOAD_SUCCESS"  # Prévient la boucle principale du jeu qu'il faut rafraîchir l'affichage
 
                 if not self.overlay_rect.collidepoint(event.pos):
                     self.load_menu_active = False
@@ -79,10 +81,12 @@ class SaveLoadSystem:
         # Input de nom de fichier actif
         if self.input_active:
             if event.type == pygame.KEYDOWN:
+                # Return valide la sauvegarde
                 if event.key == pygame.K_RETURN:
                     self.save_world_to_disk(world)
                     self.input_active = False
                     self.feedback_timer = 90
+                # Backspace efface le dernier caractère
                 elif event.key == pygame.K_BACKSPACE:
                     self.filename = self.filename[:-1]
                 elif event.key == pygame.K_ESCAPE:
@@ -105,19 +109,23 @@ class SaveLoadSystem:
         return False
 
     def save_world_to_disk(self, world):
-        if not os.path.exists("Saves"): os.makedirs("Saves")
+        try:
+            # Dossier de sauvegardes
+            if not os.path.exists("Saves"): os.makedirs("Saves")
 
-        # Correction crash : On vérifie si c'est du Numpy ou une liste
-        grid_to_save = world.grid.tolist() if hasattr(world.grid, 'tolist') else world.grid
+            # Correction crash : On vérifie si c'est du Numpy ou une liste pour convertir en liste
+            grid_to_save = world.grid.tolist() if hasattr(world.grid, 'tolist') else world.grid
 
-        data = {
-            "grid": grid_to_save,
-            "hours": cfg.world_hours,
-            "days": cfg.world_days,
-            "tile_size": world.tile_size
-        }
-        with open(f"Saves/{self.filename}.json", "w") as f:
-            json.dump(data, f)
+            data = {
+                "grid": grid_to_save,
+                "hours": cfg.world_hours,
+                "days": cfg.world_days,
+                "tile_size": world.tile_size
+            }
+            with open(f"Saves/{self.filename}.json", "w") as f:
+                json.dump(data, f)
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde : {e}")
 
     def open_load_menu(self):
         if not os.path.exists("Saves"): os.makedirs("Saves")
@@ -125,7 +133,7 @@ class SaveLoadSystem:
         self.load_menu_active = True
 
     def load_world_data(self, filename):
-        """Lit le fichier et stocke en tampon."""
+        """Lit le fichier et stocke les variables en tampon en mettant à jour les globales."""
         try:
             with open(f"Saves/{filename}", "r") as f:
                 data = json.load(f)
@@ -141,4 +149,4 @@ class SaveLoadSystem:
         if self.temp_grid is not None:
             world.grid = self.temp_grid
             world.tile_size = self.temp_tile_size
-            self.temp_grid = None  # Nettoyage
+            self.temp_grid = None  # Reset de la variable temporaire
